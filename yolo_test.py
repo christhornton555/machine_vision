@@ -21,11 +21,13 @@ def process_frame(frame):
         if class_id == 0:  # Person class in COCO dataset
             # Get bounding box coordinates
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            confidence = box.conf  # Confidence of detection
+            
+            # Convert confidence tensor to float
+            confidence = box.conf.item()  # Extract the float value from the tensor
 
             # Draw bounding box and label on the frame
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f'Person: {confidence:.2f}'
+            label = f'Person: {confidence:.2f}'  # Format confidence to two decimal places
             cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
     
     return frame
