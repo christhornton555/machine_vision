@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-# Initialize the YOLO segmentation model (using YOLOv8 pre-trained on COCO dataset)
-model = YOLO('yolov8n-seg.pt')  # Use the segmentation model (nano version)
+# Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection)
+model = YOLO('yolov8n-pose.pt')  # Use the pose detection model (nano version)
 
 # COCO classes (80 different object categories)
 COCO_CLASSES = [
@@ -21,7 +21,7 @@ COCO_CLASSES = [
 # Open a video capture stream (0 means default camera)
 cap = cv2.VideoCapture(0)
 
-# Define random colors for each class (for segment masks)
+# Define random colors for each class (for segment masks and keypoints)
 np.random.seed(42)
 COLORS = np.random.randint(0, 255, size=(len(COCO_CLASSES), 3), dtype='uint8')
 
@@ -32,7 +32,16 @@ def apply_mask(image, mask, color, alpha=0.5):
         image[:, :, c] = np.where(mask == 1, image[:, :, c] * (1 - alpha) + alpha * color[c], image[:, :, c])
     return image
 
-# Function to process each frame and detect objects with segmentation
+# Function to draw keypoints
+def draw_keypoints(image, keypoints, color=(0, 255, 255)):
+    """Draw keypoints on the image."""
+    for kp in keypoints:
+        x, y, conf = int(kp[0]), int(kp[1]), kp[2]
+        if conf > 0.5:  # Only draw if confidence is high enough
+            cv2.circle(image, (x, y), 5, color, -1)
+    return image
+
+# Function to process each frame and detect objects, keypoints, and segmentation
 def process_frame(frame):
     # Run YOLOv8 model on the frame
     results = model(frame)
@@ -41,6 +50,7 @@ def process_frame(frame):
     detections = results[0]
     boxes = detections.boxes
     masks = detections.masks.data.cpu().numpy() if detections.masks else None
+    keypoints = detections.keypoints.data.cpu().numpy() if detections.keypoints else None
     
     for i, box in enumerate(boxes):
         class_id = int(box.cls.item())  # Convert the tensor to an integer
@@ -59,7 +69,13 @@ def process_frame(frame):
             # Apply the mask with a color overlay
             color = COLORS[class_id]
             frame = apply_mask(frame, mask_binary, color)
-        
+
+        # Draw keypoints if available
+        if keypoints is not None:
+            # Draw keypoints for the ith object
+            kp = keypoints[i]
+            frame = draw_keypoints(frame, kp)
+
         # Get class label from COCO_CLASSES list
         label = f'{COCO_CLASSES[class_id]}: {confidence:.2f}'
 
@@ -75,11 +91,11 @@ while True:
     if not ret:
         break
 
-    # Process the frame to detect and track objects with segmentation
+    # Process the frame to detect and track objects with segmentation and keypoints
     frame = process_frame(frame)
 
     # Display the resulting frame
-    cv2.imshow('YOLOv8 Instance Segmentation', frame)
+    cv2.imshow('YOLOv8 Keypoint Detection and Segmentation', frame)
 
     # Press 'q' to quit the video stream
     if cv2.waitKey(1) & 0xFF == ord('q'):
