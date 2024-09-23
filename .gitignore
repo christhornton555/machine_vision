@@ -3,3 +3,4 @@ test_data/
 __pycache__/
 yolov8n.pt
 yolov8n-seg.pt
+yolov8n-pose.pt
