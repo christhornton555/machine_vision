@@ -3,6 +3,7 @@ import numpy as np
 import dlib
 import mediapipe as mp
 from ultralytics import YOLO
+from math import dist
 
 # Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection)
 model = YOLO('yolov8n-pose.pt')  # Use the pose detection model (nano version)
@@ -60,6 +61,17 @@ POSE_COLORS = {
 # Open a video capture stream (0 means default camera)
 cap = cv2.VideoCapture(0)
 
+# Function to apply gamma correction to adjust brightness
+def apply_gamma_correction(image, gamma=1.0):
+    inv_gamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+    return cv2.LUT(image, table)
+
+# Function to apply contrast adjustment
+def adjust_contrast(image, alpha=1.0, beta=0):
+    """Apply contrast and brightness adjustment."""
+    return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+
 # Function to draw skeleton connections
 def draw_skeleton(image, keypoints):
     """Draw skeleton connections between keypoints."""
@@ -97,15 +109,26 @@ def draw_facial_landmarks(image, landmarks):
     return image
 
 # Function to process each frame and detect objects, keypoints, hand tracking, and facial landmarks
-def process_frame(frame):
+def process_frame(frame, gamma, default_gamma, alpha_contrast):
+    gamma_increase_step = 0.2
+    max_gamma = 2.4
+    contrast_increase_step = 0.2
+    max_contrast = 2.4
+
+    # Apply gamma correction and contrast adjustment
+    frame_gamma_adjusted = apply_gamma_correction(frame, gamma)
+    frame_adjusted = adjust_contrast(frame_gamma_adjusted, alpha=alpha_contrast)
+
     # Run YOLOv8 model on the frame for body keypoints
-    results = model(frame)
+    results = model(frame_adjusted)
     
     # Extract detections (boxes, masks, keypoints)
     detections = results[0]
     boxes = detections.boxes
     keypoints = detections.keypoints.data.cpu().numpy() if detections.keypoints else None
-    
+
+    head_keypoints_found = False
+
     # Process YOLO keypoints and skeleton
     for i, box in enumerate(boxes):
         class_id = int(box.cls.item())  # Convert the tensor to an integer
@@ -113,21 +136,41 @@ def process_frame(frame):
         # Get bounding box coordinates (for drawing if needed)
         x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        # Draw keypoints and skeleton
+        # Check head-related keypoints (e.g., nose and shoulders)
         if keypoints is not None:
             kp = keypoints[i]
-            frame = draw_keypoints(frame, kp)
-            frame = draw_skeleton(frame, kp)
+            if kp[0][2] > 0.5 and kp[5][2] > 0.5 and kp[6][2] > 0.5:  # If nose, left shoulder, and right shoulder are detected
+                head_keypoints_found = True
+                nose_x, nose_y = int(kp[0][0]), int(kp[0][1])
+                left_shoulder_x, left_shoulder_y = int(kp[5][0]), int(kp[5][1])
+                right_shoulder_x, right_shoulder_y = int(kp[6][0]), int(kp[6][1])
+
+                # Check if nose is more than 10 pixels away from shoulders (distance between head keypoints)
+                distance_nose_to_shoulders = dist([left_shoulder_x, left_shoulder_y], [right_shoulder_x, right_shoulder_y])
+                if distance_nose_to_shoulders > 10:
+                    # Try to detect the face with dlib if YOLO suggests a head but dlib fails to detect it
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    faces = detector(gray, 0)
+                    if len(faces) == 0:  # If no face detected, increase gamma and contrast
+                        gamma = min(gamma + gamma_increase_step, max_gamma)
+                        alpha_contrast = min(alpha_contrast + contrast_increase_step, max_contrast)
+                    else:
+                        gamma = default_gamma  # Reset gamma and contrast if a face is detected
+                        alpha_contrast = 1.0
+                
+                # Draw keypoints and skeleton
+                frame_adjusted = draw_keypoints(frame_adjusted, kp)
+                frame_adjusted = draw_skeleton(frame_adjusted, kp)
         
         # Get class label from COCO_CLASSES list
         label = f'{COCO_CLASSES[class_id]}'
         
         # Draw bounding box and label on the frame
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+        cv2.rectangle(frame_adjusted, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(frame_adjusted, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
     # Convert frame to RGB for Mediapipe hand tracking
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    rgb_frame = cv2.cvtColor(frame_adjusted, cv2.COLOR_BGR2RGB)
     
     # Process hand landmarks with Mediapipe
     result_hands = hands.process(rgb_frame)
@@ -135,7 +178,7 @@ def process_frame(frame):
         for hand_landmarks in result_hands.multi_hand_landmarks:
             # Draw hand landmarks on the frame
             mp_drawing.draw_landmarks(
-                frame,
+                frame_adjusted,
                 hand_landmarks,
                 mp_hands.HAND_CONNECTIONS,
                 mp_drawing_styles.get_default_hand_landmarks_style(),
@@ -143,7 +186,7 @@ def process_frame(frame):
             )
 
     # Convert frame to grayscale for dlib facial landmark detection
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(frame_adjusted, cv2.COLOR_BGR2GRAY)
     
     # Detect faces using dlib
     faces = detector(gray, 0)
@@ -152,21 +195,24 @@ def process_frame(frame):
         landmarks = predictor(gray, face)
         
         # Draw the landmarks
-        frame = draw_facial_landmarks(frame, landmarks)
+        frame_adjusted = draw_facial_landmarks(frame_adjusted, landmarks)
     
-    return frame
+    return frame_adjusted, gamma, alpha_contrast
 
 # Loop to continuously capture and process video frames
+default_gamma = 1.0
+gamma = default_gamma
+alpha_contrast = 1.0
 while True:
     ret, frame = cap.read()  # Capture frame-by-frame
     if not ret:
         break
 
-    # Process the frame to detect and track objects with keypoints, skeleton, hands, and facial landmarks
-    frame = process_frame(frame)
+    # Process the frame with adaptive gamma and contrast adjustment based on YOLO and dlib results
+    frame, gamma, alpha_contrast = process_frame(frame, gamma, default_gamma, alpha_contrast)
 
     # Display the resulting frame
-    cv2.imshow('YOLOv8 Keypoint Detection with Hand and Facial Feature Tracking', frame)
+    cv2.imshow('YOLOv8 Keypoint Detection with Hand, Facial Tracking, and Adaptive Gamma/Contrast', frame)
 
     # Press 'q' to quit the video stream
     if cv2.waitKey(1) & 0xFF == ord('q'):
