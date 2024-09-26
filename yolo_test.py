@@ -1,9 +1,14 @@
 import cv2
 import numpy as np
+import dlib
 from ultralytics import YOLO
 
 # Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection)
 model = YOLO('yolov8n-pose.pt')  # Use the pose detection model (nano version)
+
+# Initialize dlib's face detector and facial landmark predictor
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')  # Ensure you have this model
 
 # COCO classes (80 different object categories)
 COCO_CLASSES = [
@@ -18,7 +23,7 @@ COCO_CLASSES = [
     'teddy bear', 'hair drier', 'toothbrush'
 ]
 
-# Skeleton connections (pairs of keypoint indices)
+# Skeleton connections (pairs of keypoint indices for YOLO)
 SKELETON_CONNECTIONS = [
     (5, 6),   # Shoulders
     (5, 7),   # Left Shoulder to Elbow
@@ -65,7 +70,7 @@ def draw_skeleton(image, keypoints):
             cv2.line(image, (x_start, y_start), (x_end, y_end), color, 2)
     return image
 
-# Function to draw keypoints (optional circles on joints)
+# Function to draw YOLO keypoints (optional circles on joints)
 def draw_keypoints(image, keypoints, color=(0, 255, 255)):
     """Draw keypoints on the image."""
     for kp in keypoints:
@@ -74,7 +79,15 @@ def draw_keypoints(image, keypoints, color=(0, 255, 255)):
             cv2.circle(image, (x, y), 5, color, -1)
     return image
 
-# Function to process each frame and detect objects, keypoints, and segmentation
+# Function to draw facial landmarks
+def draw_facial_landmarks(image, landmarks):
+    """Draw facial landmarks."""
+    for i in range(0, 68):  # There are 68 points for facial landmarks
+        x, y = landmarks.part(i).x, landmarks.part(i).y
+        cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
+    return image
+
+# Function to process each frame and detect objects, keypoints, and facial landmarks
 def process_frame(frame):
     # Run YOLOv8 model on the frame
     results = model(frame)
@@ -84,6 +97,7 @@ def process_frame(frame):
     boxes = detections.boxes
     keypoints = detections.keypoints.data.cpu().numpy() if detections.keypoints else None
     
+    # Process YOLO keypoints and skeleton
     for i, box in enumerate(boxes):
         class_id = int(box.cls.item())  # Convert the tensor to an integer
         
@@ -102,7 +116,19 @@ def process_frame(frame):
         # Draw bounding box and label on the frame
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-
+    
+    # Convert frame to grayscale for dlib facial landmark detection
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    # Detect faces using dlib
+    faces = detector(gray, 0)
+    for face in faces:
+        # Get facial landmarks for the face
+        landmarks = predictor(gray, face)
+        
+        # Draw the landmarks
+        frame = draw_facial_landmarks(frame, landmarks)
+    
     return frame
 
 # Loop to continuously capture and process video frames
@@ -111,11 +137,11 @@ while True:
     if not ret:
         break
 
-    # Process the frame to detect and track objects with keypoints and skeleton
+    # Process the frame to detect and track objects with keypoints, skeleton, and facial landmarks
     frame = process_frame(frame)
 
     # Display the resulting frame
-    cv2.imshow('YOLOv8 Keypoint Detection with Skeleton', frame)
+    cv2.imshow('YOLOv8 Keypoint Detection with Skeleton and Facial Features', frame)
 
     # Press 'q' to quit the video stream
     if cv2.waitKey(1) & 0xFF == ord('q'):
