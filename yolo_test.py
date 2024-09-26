@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import dlib
+import mediapipe as mp
 from ultralytics import YOLO
 
 # Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection)
@@ -9,6 +10,14 @@ model = YOLO('yolov8n-pose.pt')  # Use the pose detection model (nano version)
 # Initialize dlib's face detector and facial landmark predictor
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')  # Ensure you have this model
+
+# Initialize Mediapipe for hand tracking
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
+
+# Initialize drawing utility for Mediapipe
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
 
 # COCO classes (80 different object categories)
 COCO_CLASSES = [
@@ -87,9 +96,9 @@ def draw_facial_landmarks(image, landmarks):
         cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
     return image
 
-# Function to process each frame and detect objects, keypoints, and facial landmarks
+# Function to process each frame and detect objects, keypoints, hand tracking, and facial landmarks
 def process_frame(frame):
-    # Run YOLOv8 model on the frame
+    # Run YOLOv8 model on the frame for body keypoints
     results = model(frame)
     
     # Extract detections (boxes, masks, keypoints)
@@ -116,7 +125,23 @@ def process_frame(frame):
         # Draw bounding box and label on the frame
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+    # Convert frame to RGB for Mediapipe hand tracking
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     
+    # Process hand landmarks with Mediapipe
+    result_hands = hands.process(rgb_frame)
+    if result_hands.multi_hand_landmarks:
+        for hand_landmarks in result_hands.multi_hand_landmarks:
+            # Draw hand landmarks on the frame
+            mp_drawing.draw_landmarks(
+                frame,
+                hand_landmarks,
+                mp_hands.HAND_CONNECTIONS,
+                mp_drawing_styles.get_default_hand_landmarks_style(),
+                mp_drawing_styles.get_default_hand_connections_style()
+            )
+
     # Convert frame to grayscale for dlib facial landmark detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
@@ -137,11 +162,11 @@ while True:
     if not ret:
         break
 
-    # Process the frame to detect and track objects with keypoints, skeleton, and facial landmarks
+    # Process the frame to detect and track objects with keypoints, skeleton, hands, and facial landmarks
     frame = process_frame(frame)
 
     # Display the resulting frame
-    cv2.imshow('YOLOv8 Keypoint Detection with Skeleton and Facial Features', frame)
+    cv2.imshow('YOLOv8 Keypoint Detection with Hand and Facial Feature Tracking', frame)
 
     # Press 'q' to quit the video stream
     if cv2.waitKey(1) & 0xFF == ord('q'):
