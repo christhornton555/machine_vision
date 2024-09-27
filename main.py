@@ -25,30 +25,13 @@ def main():
         # Object detection
         detection_results = detector.detect(frame)
 
-        # Ensure we have valid detection results
-        if len(detection_results) > 0 and hasattr(detection_results[0], 'boxes'):
-            boxes = detection_results[0].boxes
-            if boxes is not None:
-                # Extract class names, confidences, and bounding boxes
-                classes = [int(box.cls.item()) for box in boxes]  # Class IDs
-                labels = [detector.detection_model.names[cls] for cls in classes]  # Class labels (names)
-                confidences = [box.conf.item() for box in boxes]  # Confidence scores
+        # Apply segmentation masks
+        segmentation_results = detector.segment(frame)
+        if segmentation_results[0].masks is not None:
+            masks = segmentation_results[0].masks.data.cpu().numpy()
+            frame = apply_mask(frame, masks)
 
-                # Apply segmentation masks
-                segmentation_results = detector.segment(frame)
-                if segmentation_results[0].masks is not None:
-                    masks = segmentation_results[0].masks.data.cpu().numpy()
-
-                    # Ensure the number of masks matches the number of detected objects
-                    if len(masks) == len(labels):
-                        # Apply masks and labels
-                        frame = apply_mask(frame, masks, classes, labels, confidences)
-                    else:
-                        print(f"Warning: Detected {len(labels)} objects, but found {len(masks)} masks.")
-                else:
-                    print("No masks found for this frame.")
-
-        # Show the frame with masks and labels applied
+        # Show the frame with masks applied
         cv2.imshow('YOLO Object Detection & Segmentation', frame)
 
         # Press 'q' to quit the video stream
