@@ -30,11 +30,11 @@ def main():
             classes = segmentation_results[0].names  # Class names
             class_ids = segmentation_results[0].boxes.cls.cpu().numpy()  # Detected class indices
 
-            # Apply instance masks with different colors
+            # Apply instance masks with different colors and display brightness
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Show the frame with instance segmentation applied
-        cv2.imshow('YOLOv8 Instance Segmentation', frame)
+        cv2.imshow('YOLOv8 Instance Segmentation with Brightness', frame)
 
         # Press 'q' to quit the video stream
         if cv2.waitKey(1) & 0xFF == ord('q'):
