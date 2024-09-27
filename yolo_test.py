@@ -3,7 +3,7 @@ import numpy as np
 import dlib
 import mediapipe as mp
 from ultralytics import YOLO
-import torch  # Used to select CPU or GPU device
+import torch
 from math import dist
 
 # Function to choose device (CPU or GPU)
@@ -25,7 +25,7 @@ model.to(device)  # Move model to the specified device (CPU or GPU)
 
 # Initialize dlib's face detector and facial landmark predictor
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')  # Ensure you have this model
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
 # Initialize Mediapipe for hand tracking
 mp_hands = mp.solutions.hands
@@ -38,13 +38,13 @@ mp_drawing_styles = mp.solutions.drawing_styles
 # COCO classes (80 different object categories)
 COCO_CLASSES = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
-    'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 
-    'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 
-    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 
-    'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 
-    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 
-    'potted plant', 'bed', 'dining table', 'toilet', 'TV', 'laptop', 'mouse', 'remote', 'keyboard', 
-    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 
+    'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+    'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+    'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+    'potted plant', 'bed', 'dining table', 'toilet', 'TV', 'laptop', 'mouse', 'remote', 'keyboard',
+    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
     'teddy bear', 'hair drier', 'toothbrush'
 ]
 
@@ -103,6 +103,29 @@ def preprocess_frame_for_yolo(frame, target_size=640):
     frame_tensor = frame_tensor.to(device)
     return frame_tensor
 
+# Function to calculate the brightness of the frame
+def calculate_brightness(image):
+    """Calculate the average brightness of the image."""
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    brightness = np.mean(hsv[:, :, 2])  # V channel represents brightness
+    return brightness
+
+# Function to adjust frame for both low-light and bright-light conditions
+def adjust_brightness_contrast(frame, brightness, gamma, alpha_contrast):
+    """Dynamically adjust the gamma and contrast based on brightness."""
+    # Only adjust if the brightness is extremely high or low
+    if brightness > 220:  # Very bright
+        gamma = max(gamma - 0.1, 0.9)  # Slightly decrease gamma
+        alpha_contrast = min(alpha_contrast + 0.1, 1.6)  # Slightly increase contrast
+    elif brightness < 60:  # Very dark
+        gamma = min(gamma + 0.1, 2.0)  # Slightly increase gamma
+        alpha_contrast = min(alpha_contrast + 0.1, 1.6)  # Slightly increase contrast
+    else:
+        gamma = 1.0  # Reset gamma to default
+        alpha_contrast = 1.0  # Reset contrast to default
+
+    return apply_gamma_correction(frame, gamma), adjust_contrast(frame, alpha_contrast), gamma, alpha_contrast
+
 # Function to draw skeleton connections
 def draw_skeleton(image, keypoints):
     """Draw skeleton connections between keypoints."""
@@ -131,24 +154,18 @@ def draw_keypoints(image, keypoints, color=(0, 255, 255)):
             cv2.circle(image, (x, y), 5, color, -1)
     return image
 
-# Function to draw facial landmarks
-def draw_facial_landmarks(image, landmarks):
-    """Draw facial landmarks."""
-    for i in range(0, 68):  # There are 68 points for facial landmarks
-        x, y = landmarks.part(i).x, landmarks.part(i).y
-        cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
-    return image
-
 # Function to process each frame and detect objects, keypoints, hand tracking, and facial landmarks
 def process_frame(frame, gamma, default_gamma, alpha_contrast):
-    gamma_increase_step = 0.2
-    max_gamma = 2.0
-    contrast_increase_step = 0.2
-    max_contrast = 2.0
+    # Calculate brightness
+    brightness = calculate_brightness(frame)
 
-    # Apply gamma correction and contrast adjustment
-    frame_gamma_adjusted = apply_gamma_correction(frame, gamma)
-    frame_adjusted = adjust_contrast(frame_gamma_adjusted, alpha=alpha_contrast)
+    # Adjust gamma and contrast based on brightness
+    if brightness < 60 or brightness > 220:  # Only adjust in extreme lighting
+        frame_gamma_adjusted, frame_adjusted, gamma, alpha_contrast = adjust_brightness_contrast(frame, brightness, gamma, alpha_contrast)
+    else:
+        frame_adjusted = frame
+        gamma = 1.0
+        alpha_contrast = 1.0
 
     # Preprocess the frame for YOLO
     frame_tensor = preprocess_frame_for_yolo(frame_adjusted)
@@ -179,19 +196,6 @@ def process_frame(frame, gamma, default_gamma, alpha_contrast):
                 left_shoulder_x, left_shoulder_y = int(kp[5][0]), int(kp[5][1])
                 right_shoulder_x, right_shoulder_y = int(kp[6][0]), int(kp[6][1])
 
-                # Check if nose is more than 10 pixels away from shoulders (distance between head keypoints)
-                distance_nose_to_shoulders = dist([left_shoulder_x, left_shoulder_y], [right_shoulder_x, right_shoulder_y])
-                if distance_nose_to_shoulders > 10:
-                    # Try to detect the face with dlib if YOLO suggests a head but dlib fails to detect it
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    faces = detector(gray, 0)
-                    if len(faces) == 0:  # If no face detected, increase gamma and contrast
-                        gamma = min(gamma + gamma_increase_step, max_gamma)
-                        alpha_contrast = min(alpha_contrast + contrast_increase_step, max_contrast)
-                    else:
-                        gamma = default_gamma  # Reset gamma and contrast if a face is detected
-                        alpha_contrast = 1.0
-                
                 # Draw keypoints and skeleton
                 frame_adjusted = draw_keypoints(frame_adjusted, kp)
                 frame_adjusted = draw_skeleton(frame_adjusted, kp)
@@ -219,18 +223,6 @@ def process_frame(frame, gamma, default_gamma, alpha_contrast):
                 mp_drawing_styles.get_default_hand_connections_style()
             )
 
-    # Convert frame to grayscale for dlib facial landmark detection
-    gray = cv2.cvtColor(frame_adjusted, cv2.COLOR_BGR2GRAY)
-    
-    # Detect faces using dlib
-    faces = detector(gray, 0)
-    for face in faces:
-        # Get facial landmarks for the face
-        landmarks = predictor(gray, face)
-        
-        # Draw the landmarks
-        frame_adjusted = draw_facial_landmarks(frame_adjusted, landmarks)
-    
     return frame_adjusted, gamma, alpha_contrast
 
 # Loop to continuously capture and process video frames
@@ -242,11 +234,11 @@ while True:
     if not ret:
         break
 
-    # Process the frame with adaptive gamma and contrast adjustment based on YOLO and dlib results
+    # Process the frame with minimal gamma and contrast adjustment, only for extreme lighting
     frame, gamma, alpha_contrast = process_frame(frame, gamma, default_gamma, alpha_contrast)
 
     # Display the resulting frame
-    cv2.imshow('YOLOv8 Keypoint Detection with Hand, Facial Tracking, and Adaptive Gamma/Contrast', frame)
+    cv2.imshow('YOLOv8 Keypoint Detection with Hand, Facial Tracking, and Minimal Gamma/Contrast Adjustments', frame)
 
     # Press 'q' to quit the video stream
     if cv2.waitKey(1) & 0xFF == ord('q'):
