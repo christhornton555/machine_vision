@@ -1,8 +1,9 @@
 import cv2
+import numpy as np
 from config.config import select_device
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
-from core.postprocessing import apply_mask
+from core.postprocessing import apply_instance_mask
 
 def main():
     # Choose between CPU or GPU
@@ -11,10 +12,9 @@ def main():
     # Initialize video capture (from webcam)
     video_capture = get_video_stream(source=0)
 
-    # Initialize the object detector with detection and segmentation models
-    detection_model_path = 'models/yolov8n.pt'
+    # Initialize the object detector with the segmentation model (for instance segmentation)
     segmentation_model_path = 'models/yolov8n-seg.pt'
-    detector = ObjectDetector(detection_model_path, segmentation_model_path, device)
+    detector = ObjectDetector(segmentation_model_path, device)
 
     while True:
         ret, frame = video_capture.read()
@@ -22,17 +22,19 @@ def main():
             print("Failed to grab frame.")
             break
 
-        # Object detection
-        detection_results = detector.detect(frame)
-
-        # Apply segmentation masks
+        # Perform instance segmentation
         segmentation_results = detector.segment(frame)
         if segmentation_results[0].masks is not None:
-            masks = segmentation_results[0].masks.data.cpu().numpy()
-            frame = apply_mask(frame, masks)
+            # Get masks and classes for segmentation
+            masks = segmentation_results[0].masks.data.cpu().numpy()  # Mask data
+            classes = segmentation_results[0].names  # Class names
+            class_ids = segmentation_results[0].boxes.cls.cpu().numpy()  # Detected class indices
 
-        # Show the frame with masks applied
-        cv2.imshow('YOLO Object Detection & Segmentation', frame)
+            # Apply instance masks with different colors
+            frame = apply_instance_mask(frame, masks, class_ids, classes)
+
+        # Show the frame with instance segmentation applied
+        cv2.imshow('YOLOv8 Instance Segmentation', frame)
 
         # Press 'q' to quit the video stream
         if cv2.waitKey(1) & 0xFF == ord('q'):
