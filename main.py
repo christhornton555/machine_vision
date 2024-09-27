@@ -4,6 +4,7 @@ from config.config import select_device
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
 from core.postprocessing import apply_instance_mask, display_brightness
+from core.camera_control import camera_settings  # Import camera control function
 
 def main():
     # Choose between CPU or GPU
@@ -11,6 +12,9 @@ def main():
 
     # Initialize video capture (from webcam)
     video_capture = get_video_stream(source=0)
+
+    # Set manual focus for the Logitech C920 (disable auto-focus and set specific focus value)
+    camera_settings(video_capture, auto_focus=False, focus_value=255)  # Adjust focus value as needed
 
     # Initialize the object detector with the segmentation model (for instance segmentation)
     segmentation_model_path = 'models/yolov8n-seg.pt'
