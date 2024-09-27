@@ -3,10 +3,25 @@ import numpy as np
 import dlib
 import mediapipe as mp
 from ultralytics import YOLO
+import torch  # Used to select CPU or GPU device
 from math import dist
 
-# Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection)
+# Function to choose device (CPU or GPU)
+def select_device():
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        print("Running on GPU")
+    else:
+        device = torch.device('cpu')
+        print("Running on CPU")
+    return device
+
+# Ask the user to choose between CPU and GPU
+device = select_device()
+
+# Initialize the YOLO pose model (using YOLOv8 pre-trained for keypoints detection) on the selected device
 model = YOLO('yolov8n-pose.pt')  # Use the pose detection model (nano version)
+model.to(device)  # Move model to the specified device (CPU or GPU)
 
 # Initialize dlib's face detector and facial landmark predictor
 detector = dlib.get_frontal_face_detector()
@@ -72,6 +87,22 @@ def adjust_contrast(image, alpha=1.0, beta=0):
     """Apply contrast and brightness adjustment."""
     return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
+# Function to preprocess the input frame for YOLO
+def preprocess_frame_for_yolo(frame, target_size=640):
+    """Resize and normalize the frame for YOLO model."""
+    # Resize to the target size (640x640 or any size YOLO expects)
+    resized_frame = cv2.resize(frame, (target_size, target_size))
+
+    # Convert to float32 and normalize the image
+    resized_frame = resized_frame.astype(np.float32) / 255.0
+
+    # Convert the frame from HWC (height, width, channels) to CHW (channels, height, width)
+    frame_tensor = torch.from_numpy(resized_frame).permute(2, 0, 1).unsqueeze(0)  # Add batch dimension (B, C, H, W)
+    
+    # Move to the same device as the model
+    frame_tensor = frame_tensor.to(device)
+    return frame_tensor
+
 # Function to draw skeleton connections
 def draw_skeleton(image, keypoints):
     """Draw skeleton connections between keypoints."""
@@ -119,8 +150,11 @@ def process_frame(frame, gamma, default_gamma, alpha_contrast):
     frame_gamma_adjusted = apply_gamma_correction(frame, gamma)
     frame_adjusted = adjust_contrast(frame_gamma_adjusted, alpha=alpha_contrast)
 
+    # Preprocess the frame for YOLO
+    frame_tensor = preprocess_frame_for_yolo(frame_adjusted)
+
     # Run YOLOv8 model on the frame for body keypoints
-    results = model(frame_adjusted)
+    results = model(frame_tensor)
     
     # Extract detections (boxes, masks, keypoints)
     detections = results[0]
