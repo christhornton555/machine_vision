@@ -142,9 +142,9 @@ def draw_facial_landmarks(image, landmarks):
 # Function to process each frame and detect objects, keypoints, hand tracking, and facial landmarks
 def process_frame(frame, gamma, default_gamma, alpha_contrast):
     gamma_increase_step = 0.2
-    max_gamma = 2.4
+    max_gamma = 2.0
     contrast_increase_step = 0.2
-    max_contrast = 2.4
+    max_contrast = 2.0
 
     # Apply gamma correction and contrast adjustment
     frame_gamma_adjusted = apply_gamma_correction(frame, gamma)
