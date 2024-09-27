@@ -15,9 +15,33 @@ def calculate_brightness(frame):
     brightness = np.mean(hsv[:, :, 2])  # V channel represents brightness
     return brightness
 
+def display_brightness(frame):
+    """
+    Calculate and display the brightness value on the frame.
+
+    Args:
+        frame (np.array): The video frame.
+
+    Returns:
+        np.array: The frame with brightness displayed in the top-right corner.
+    """
+    # Calculate the brightness of the frame
+    brightness = calculate_brightness(frame)
+    
+    # Set the text with brightness value
+    brightness_text = f'Brightness: {brightness:.2f}'
+    
+    # Get frame dimensions
+    h, w, _ = frame.shape
+
+    # Draw the brightness in the top-right corner (color: 255, 127, 255)
+    cv2.putText(frame, brightness_text, (w - 300, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 127, 255), 2)
+    
+    return frame
+
 def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
     """
-    Apply semi-transparent instance segmentation masks to the frame with unique colors and show brightness.
+    Apply semi-transparent instance segmentation masks to the frame with unique colors.
 
     Args:
         frame (np.array): The video frame.
@@ -27,7 +51,7 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         alpha (float): Transparency of the mask.
 
     Returns:
-        np.array: The frame with applied instance segmentation masks and brightness.
+        np.array: The frame with applied instance segmentation masks.
     """
     overlay = frame.copy()
     h, w, _ = frame.shape
@@ -53,10 +77,5 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         # Get class name and add a label on the object
         class_name = class_names[class_id]
         cv2.putText(frame, class_name, (10, 30 * (i + 1)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color.tolist(), 2)
-
-    # Calculate and display brightness
-    brightness = calculate_brightness(frame)
-    brightness_text = f'Brightness: {brightness:.2f}'
-    cv2.putText(frame, brightness_text, (w - 300, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 127, 255), 2)
 
     return frame

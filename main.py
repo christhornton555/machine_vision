@@ -3,7 +3,7 @@ import numpy as np
 from config.config import select_device
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
-from core.postprocessing import apply_instance_mask
+from core.postprocessing import apply_instance_mask, display_brightness
 
 def main():
     # Choose between CPU or GPU
@@ -30,10 +30,13 @@ def main():
             classes = segmentation_results[0].names  # Class names
             class_ids = segmentation_results[0].boxes.cls.cpu().numpy()  # Detected class indices
 
-            # Apply instance masks with different colors and display brightness
+            # Apply instance masks with different colors
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
-        # Show the frame with instance segmentation applied
+        # Calculate and display brightness
+        frame = display_brightness(frame)
+
+        # Show the frame with instance segmentation and brightness applied
         cv2.imshow('YOLOv8 Instance Segmentation with Brightness', frame)
 
         # Press 'q' to quit the video stream
