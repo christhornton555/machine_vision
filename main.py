@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import argparse
 from collections import deque
 from config.config import select_device
 from core.video_capture import get_video_stream
@@ -31,35 +32,36 @@ def smooth_detections(detection_buffer):
     Returns:
         smoothed_results: Averaged or most common detection results from the buffer.
     """
-    # Initialize the result storage for smoothed results
     smoothed_results = None
-    
-    if len(detection_buffer) > 0:
-        # Take the detection results that are present in the majority of the frames
-        frame_count = len(detection_buffer)
-        results_count = {}
-        for results in detection_buffer:
-            for obj_class in results.boxes.cls.cpu().numpy():
-                obj_class = int(obj_class)
-                results_count[obj_class] = results_count.get(obj_class, 0) + 1
 
-        # Keep only the results that appear in at least the threshold of frames
+    if len(detection_buffer) > 0:
+        results_count = {}
+
+        # Go through the buffer and count valid detections
+        for results in detection_buffer:
+            if results.boxes is not None and len(results.boxes.cls) > 0:
+                for obj_class in results.boxes.cls.cpu().numpy():
+                    obj_class = int(obj_class)
+                    results_count[obj_class] = results_count.get(obj_class, 0) + 1
+
+        # Filter detections that meet the threshold
         valid_results = [cls for cls, count in results_count.items() if count >= DETECTION_THRESHOLD]
         
-        # Filter out the detection results for the valid objects
-        smoothed_results = [results for results in detection_buffer if int(results.boxes.cls.cpu().numpy()[0]) in valid_results]
+        # Only keep the valid results in the smoothed_results list
+        smoothed_results = [results for results in detection_buffer if len(results.boxes.cls) > 0 and int(results.boxes.cls.cpu().numpy()[0]) in valid_results]
 
     return smoothed_results[-1] if smoothed_results else None
 
-def main():
+def main(source):
     # Choose between CPU or GPU
     device = select_device(prefer_gpu=True)
 
-    # Initialize video capture (from webcam)
-    video_capture = get_video_stream(source=0)
+    # Initialize video capture (from webcam or MP4)
+    video_capture = get_video_stream(source=source)
 
-    # Set manual focus for the Logitech C920
-    camera_settings(video_capture, auto_focus=False, focus_value=255)
+    if source == 0:
+        # Set manual focus for the Logitech C920
+        camera_settings(video_capture, auto_focus=False, focus_value=255)
 
     # Initialize the object detector with the segmentation model (for instance segmentation)
     segmentation_model_path = 'models/yolov8n-seg.pt'
@@ -71,7 +73,7 @@ def main():
     while True:
         ret, frame = video_capture.read()
         if not ret:
-            print("Failed to grab frame.")
+            print("Failed to grab frame or end of video.")
             break
 
         # Calculate brightness
@@ -86,8 +88,9 @@ def main():
         # Perform instance segmentation
         segmentation_results = detector.segment(frame)
         
-        # Add current segmentation results to the buffer
-        detection_buffer.append(segmentation_results[0])
+        # Add current segmentation results to the buffer (only if valid results exist)
+        if segmentation_results[0].boxes is not None and len(segmentation_results[0].boxes.cls) > 0:
+            detection_buffer.append(segmentation_results[0])
 
         # Smooth detection results across frames
         smoothed_results = smooth_detections(detection_buffer)
@@ -116,4 +119,12 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main()
+    # Parse arguments for choosing the video source
+    parser = argparse.ArgumentParser(description='YOLOv8 Instance Segmentation with Video/Camera')
+    parser.add_argument('--video', type=str, default=None, help='Path to an MP4 video file. If not provided, webcam will be used.')
+    args = parser.parse_args()
+
+    # Use webcam (source=0) if no video file is provided, otherwise use the provided MP4 file
+    video_source = 0 if args.video is None else args.video
+
+    main(source=video_source)
