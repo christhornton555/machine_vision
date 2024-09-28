@@ -4,7 +4,23 @@ from config.config import select_device
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
 from core.postprocessing import apply_instance_mask, display_brightness
-from core.camera_control import camera_settings  # Import camera control function
+from core.camera_control import camera_settings
+from core.postprocessing import calculate_brightness
+
+def add_frames(frame1, frame2):
+    """
+    Add two frames by summing pixel values and clipping the result to [0, 255].
+
+    Args:
+        frame1 (np.array): The first video frame.
+        frame2 (np.array): The second video frame.
+
+    Returns:
+        np.array: The frame resulting from adding the pixel values of both frames.
+    """
+    # Add pixel values and clip to the range [0, 255] to prevent overflow
+    added_frame = cv2.add(frame1, frame2)
+    return np.clip(added_frame, 0, 255).astype(np.uint8)
 
 def main():
     # Choose between CPU or GPU
@@ -26,6 +42,16 @@ def main():
             print("Failed to grab frame.")
             break
 
+        # Calculate brightness
+        brightness = calculate_brightness(frame)
+        low_light_threshold = 20
+
+        # If brightness is below threshold (e.g., 20), add the current frame with the next frame
+        if brightness < low_light_threshold:
+            ret_next, next_frame = video_capture.read()
+            if ret_next:
+                frame = add_frames(frame, next_frame)
+
         # Perform instance segmentation
         segmentation_results = detector.segment(frame)
         if segmentation_results[0].masks is not None:
@@ -38,10 +64,10 @@ def main():
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
-        frame = display_brightness(frame)
+        frame = display_brightness(frame, brightness, low_light_threshold)
 
         # Show the frame with instance segmentation and brightness applied
-        cv2.imshow('YOLOv8 Instance Segmentation with Brightness', frame)
+        cv2.imshow('YOLOv8 Instance Segmentation with Brightness and Frame Addition', frame)
 
         # Press 'q' to quit the video stream
         if cv2.waitKey(1) & 0xFF == ord('q'):

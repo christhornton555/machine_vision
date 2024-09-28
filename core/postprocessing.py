@@ -15,7 +15,7 @@ def calculate_brightness(frame):
     brightness = np.mean(hsv[:, :, 2])  # V channel represents brightness
     return brightness
 
-def display_brightness(frame):
+def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
     """
     Calculate and display the brightness value on the frame.
 
@@ -26,10 +26,13 @@ def display_brightness(frame):
         np.array: The frame with brightness displayed in the top-right corner.
     """
     # Calculate the brightness of the frame
-    brightness = calculate_brightness(frame)
+    # brightness = calculate_brightness(frame)
+
+    if pre_calculated_brightness < low_light_threshold:
+        low_light_warning = '\nLOW'
     
     # Set the text with brightness value
-    brightness_text = f'Brightness: {brightness:.2f}'
+    brightness_text = f'Brightness: {pre_calculated_brightness:.2f}{low_light_warning}'
     
     # Get frame dimensions
     h, w, _ = frame.shape
