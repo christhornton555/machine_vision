@@ -27,18 +27,19 @@ def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
     """
     # Calculate the brightness of the frame
     # brightness = calculate_brightness(frame)
-
-    if pre_calculated_brightness < low_light_threshold:
-        low_light_warning = '\nLOW'
     
     # Set the text with brightness value
-    brightness_text = f'Brightness: {pre_calculated_brightness:.2f}{low_light_warning}'
+    brightness_text = f'Brightness: {pre_calculated_brightness:.2f}'
     
     # Get frame dimensions
     h, w, _ = frame.shape
 
     # Draw the brightness in the top-right corner (color: 255, 127, 255)
-    cv2.putText(frame, brightness_text, (w - 300, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 127, 255), 2)
+    cv2.putText(frame, brightness_text, (w - 240, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 127, 255), 2)
+
+    if pre_calculated_brightness < low_light_threshold:
+        low_light_warning = 'LOW'
+        cv2.putText(frame, low_light_warning, (w - 86, 57), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
     
     return frame
 
