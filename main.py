@@ -98,14 +98,14 @@ def main():
             classes = smoothed_results.names  # Class names
             class_ids = smoothed_results.boxes.cls.cpu().numpy()  # Detected class indices
 
-            # Apply instance masks with different colors
+            # Apply instance masks with different colors and labels
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
         frame = display_brightness(frame, brightness, low_light_threshold)
 
         # Show the frame with instance segmentation and brightness applied
-        cv2.imshow('YOLOv8 Instance Segmentation with Brightness and Temporal Smoothing', frame)
+        cv2.imshow('YOLOv8 Instance Segmentation with Moving Labels and Temporal Smoothing', frame)
 
         # Press 'q' to quit the video stream
         if cv2.waitKey(1) & 0xFF == ord('q'):

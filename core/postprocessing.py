@@ -25,9 +25,6 @@ def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
     Returns:
         np.array: The frame with brightness displayed in the top-right corner.
     """
-    # Calculate the brightness of the frame
-    # brightness = calculate_brightness(frame)
-    
     # Set the text with brightness value
     brightness_text = f'Brightness: {pre_calculated_brightness:.2f}'
     
@@ -45,7 +42,7 @@ def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
 
 def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
     """
-    Apply semi-transparent instance segmentation masks to the frame with unique colors.
+    Apply semi-transparent instance segmentation masks to the frame with unique colors and label objects.
 
     Args:
         frame (np.array): The video frame.
@@ -55,7 +52,7 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         alpha (float): Transparency of the mask.
 
     Returns:
-        np.array: The frame with applied instance segmentation masks.
+        np.array: The frame with applied instance segmentation masks and object labels.
     """
     overlay = frame.copy()
     h, w, _ = frame.shape
@@ -78,8 +75,28 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         for c in range(3):  # Apply mask color to each channel
             frame[:, :, c] = np.where(mask_binary == 1, frame[:, :, c] * (1 - alpha) + alpha * color[c], frame[:, :, c])
 
-        # Get class name and add a label on the object
+        # Get class name and label size for the object
         class_name = class_names[class_id]
-        cv2.putText(frame, class_name, (10, 30 * (i + 1)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color.tolist(), 2)
+        label = f"{class_name}"
+
+        # Calculate the centroid of the mask to place the label
+        M = cv2.moments(mask_binary)
+        if M["m00"] > 0:
+            cX = int(M["m10"] / M["m00"])  # Centroid X
+            cY = int(M["m01"] / M["m00"])  # Centroid Y
+        else:
+            # If the centroid calculation fails (shouldn't happen), place the label in the top-left corner
+            cX, cY = 10, 30 * (i + 1)
+
+        # Set the label font size smaller
+        font_scale = 0.5
+        label_thickness = 1
+        label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, label_thickness)
+
+        # Add a small rectangle behind the label for better visibility
+        cv2.rectangle(frame, (cX, cY - label_size[1] - 2), (cX + label_size[0], cY + 2), (0, 0, 0), -1)
+
+        # Draw the label on top of the object
+        cv2.putText(frame, label, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), label_thickness)
 
     return frame
