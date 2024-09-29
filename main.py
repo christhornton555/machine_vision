@@ -15,6 +15,12 @@ BUFFER_SIZE = 5
 # Detection threshold to consider an object valid (e.g., detected in 3 out of 5 frames)
 DETECTION_THRESHOLD = 3
 
+# Brightness threshold for low-light conditions
+LOW_LIGHT_THRESHOLD = 65
+
+# Frame buffer size (store the most recent 2 frames)
+FRAME_BUFFER_SIZE = 2
+
 def add_frames(frame1, frame2):
     """
     Add two frames by summing pixel values and clipping the result to [0, 255].
@@ -67,8 +73,8 @@ def main(source):
     segmentation_model_path = 'models/yolov8n-seg.pt'
     detector = ObjectDetector(segmentation_model_path, device)
 
-    low_light_threshold = 20
     detection_buffer = deque(maxlen=BUFFER_SIZE)  # Initialize the detection buffer
+    frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the two most recent frames
 
     while True:
         ret, frame = video_capture.read()
@@ -79,11 +85,13 @@ def main(source):
         # Calculate brightness
         brightness = calculate_brightness(frame)
 
-        # If brightness is below threshold (e.g., 20), add the current frame with the next frame
-        if brightness < low_light_threshold:
-            ret_next, next_frame = video_capture.read()
-            if ret_next:
-                frame = add_frames(frame, next_frame)
+        # Add the current frame to the frame buffer
+        frame_buffer.append(frame)
+
+        # If brightness is below threshold, add the current frame with the previous frame
+        if brightness < LOW_LIGHT_THRESHOLD and len(frame_buffer) > 1:
+            # Combine the pixel values of the last two frames
+            frame = add_frames(frame_buffer[-1], frame_buffer[-2])
 
         # Perform instance segmentation
         segmentation_results = detector.segment(frame)
@@ -105,7 +113,7 @@ def main(source):
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
-        frame = display_brightness(frame, brightness, low_light_threshold)
+        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD)
 
         # Show the frame with instance segmentation and brightness applied
         cv2.imshow('YOLOv8 Instance Segmentation with Moving Labels and Temporal Smoothing', frame)
