@@ -116,27 +116,25 @@ def main(source):
         time_since_last_switch = time.time() - last_threshold_switch_time
         print(current_threshold)
 
-        # Handle low-light conditions with different thresholds, with cooldown to prevent rapid switching
-        # if time_since_last_switch > COOLDOWN_TIME:
-        # TODO - figure this out
-        if brightness < LOW_LIGHT_THRESHOLD_2 and time_since_last_switch > COOLDOWN_TIME:
-            # If brightness is below LLT2, combine the current frame with the previous two frames
-            frame = add_frames(frame_buffer[-1], frame_buffer[-2], frame_buffer[-3])
-            current_threshold = "LOW_LIGHT_THRESHOLD_2"  # Update the current threshold
-            print(first_trigger)
-            first_trigger = False
-            # last_threshold_switch_time = time.time()  # Reset the cooldown timer
-        elif brightness < LOW_LIGHT_THRESHOLD_1 and brightness > LOW_LIGHT_THRESHOLD_2 and time_since_last_switch > COOLDOWN_TIME:
+        # Select which light threshold to use, with cooldown to prevent rapid switching
+        if time_since_last_switch > COOLDOWN_TIME:
+            if brightness > LOW_LIGHT_THRESHOLD_1:
+                current_threshold = None  # Use default threshold if brightness is above 65
+            elif brightness < LOW_LIGHT_THRESHOLD_1 and brightness > LOW_LIGHT_THRESHOLD_2:
+                current_threshold = "LOW_LIGHT_THRESHOLD_1"  # Update the current threshold
+            elif brightness < LOW_LIGHT_THRESHOLD_2:
+                current_threshold = "LOW_LIGHT_THRESHOLD_2"  # Update the current threshold
+            else:
+                current_threshold = None  # Use default threshold. Probably redundant, but here as a catch-all
+            last_threshold_switch_time = time.time()  # Reset the cooldown timer
+
+        # Handle low-light conditions with different thresholds
+        if current_threshold == "LOW_LIGHT_THRESHOLD_1":
             # If brightness is between LLT1 and LLT2, combine the current frame with the previous frame
             frame = add_frames(frame_buffer[-1], frame_buffer[-2])
-            current_threshold = "LOW_LIGHT_THRESHOLD_1"  # Update the current threshold
-            print(first_trigger)
-            first_trigger = False
-            # last_threshold_switch_time = time.time()  # Reset the cooldown timer
-        else:
-            current_threshold = None  # Use default threshold if brightness is above 65
-            print(first_trigger)
-            first_trigger = False
+        elif current_threshold == "LOW_LIGHT_THRESHOLD_2":
+            # If brightness is below LLT2, combine the current frame with the previous two frames
+            frame = add_frames(frame_buffer[-1], frame_buffer[-2], frame_buffer[-3])
 
         # Perform instance segmentation
         segmentation_results = detector.segment(frame)
