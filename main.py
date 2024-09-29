@@ -15,17 +15,24 @@ BUFFER_SIZE = 5
 # Detection threshold to consider an object valid (e.g., detected in 3 out of 5 frames)
 DETECTION_THRESHOLD = 3
 
-# Brightness threshold for low-light conditions
-LOW_LIGHT_THRESHOLD = 65
+# Brightness thresholds for low-light conditions
+LOW_LIGHT_THRESHOLD_65 = 65
+LOW_LIGHT_THRESHOLD_45 = 45
 
-# Frame buffer size (store the most recent 2 frames)
-FRAME_BUFFER_SIZE = 2
+# Frame buffer size (store the most recent 3 frames)
+FRAME_BUFFER_SIZE = 3
 
-def add_frames(frame1, frame2):
+def add_frames(*frames):
     """
-    Add two frames by summing pixel values and clipping the result to [0, 255].
+    Add multiple frames by summing pixel values and clipping the result to [0, 255].
+
+    Args:
+        *frames: Variable number of frames to be added together.
+
+    Returns:
+        np.array: The resulting frame after adding the pixel values.
     """
-    added_frame = cv2.add(frame1, frame2)
+    added_frame = np.sum(frames, axis=0)
     return np.clip(added_frame, 0, 255).astype(np.uint8)
 
 def smooth_detections(detection_buffer):
@@ -74,7 +81,7 @@ def main(source):
     detector = ObjectDetector(segmentation_model_path, device)
 
     detection_buffer = deque(maxlen=BUFFER_SIZE)  # Initialize the detection buffer
-    frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the two most recent frames
+    frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the three most recent frames
 
     while True:
         ret, frame = video_capture.read()
@@ -88,9 +95,12 @@ def main(source):
         # Add the current frame to the frame buffer
         frame_buffer.append(frame)
 
-        # If brightness is below threshold, add the current frame with the previous frame
-        if brightness < LOW_LIGHT_THRESHOLD and len(frame_buffer) > 1:
-            # Combine the pixel values of the last two frames
+        # Handle low-light conditions with different thresholds
+        if brightness < LOW_LIGHT_THRESHOLD_45 and len(frame_buffer) == 3:
+            # If brightness is below 45, combine the current frame with the previous two frames
+            frame = add_frames(frame_buffer[-1], frame_buffer[-2], frame_buffer[-3])
+        elif brightness < LOW_LIGHT_THRESHOLD_65 and len(frame_buffer) >= 2:
+            # If brightness is between 45 and 65, combine the current frame with the previous frame
             frame = add_frames(frame_buffer[-1], frame_buffer[-2])
 
         # Perform instance segmentation
@@ -113,7 +123,7 @@ def main(source):
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
-        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD)
+        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD_65)
 
         # Show the frame with instance segmentation and brightness applied
         cv2.imshow('YOLOv8 Instance Segmentation with Moving Labels and Temporal Smoothing', frame)
