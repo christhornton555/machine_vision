@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import argparse
+import time
 from collections import deque
 from config.config import select_device
 from core.video_capture import get_video_stream
@@ -16,11 +17,14 @@ BUFFER_SIZE = 5
 DETECTION_THRESHOLD = 3
 
 # Brightness thresholds for low-light conditions
-LOW_LIGHT_THRESHOLD_65 = 65
-LOW_LIGHT_THRESHOLD_45 = 45
+LOW_LIGHT_THRESHOLD_1 = 65
+LOW_LIGHT_THRESHOLD_2 = 45
 
 # Frame buffer size (store the most recent 3 frames)
 FRAME_BUFFER_SIZE = 3
+
+# Cooldown time (in seconds) to prevent switching between brightness thresholds too quickly
+COOLDOWN_TIME = 3  # 3 seconds
 
 def add_frames(*frames):
     """
@@ -83,6 +87,14 @@ def main(source):
     detection_buffer = deque(maxlen=BUFFER_SIZE)  # Initialize the detection buffer
     frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the three most recent frames
 
+    # Initialize the cooldown timer for switching between brightness thresholds
+    last_threshold_switch_time = time.time()
+    current_threshold = None  # Track the current threshold level
+
+    # Use a simple flag to track if the app has just started, to negate the risk of an empty frame buffer
+    just_started = True
+    first_trigger = True
+
     while True:
         ret, frame = video_capture.read()
         if not ret:
@@ -94,14 +106,37 @@ def main(source):
 
         # Add the current frame to the frame buffer
         frame_buffer.append(frame)
+        # Fill the buffer with this one frame on the first loop, so that it's not empty if the low-light stuff is triggered
+        if just_started:
+            for i in range(FRAME_BUFFER_SIZE - 1):
+                frame_buffer.append(frame)
+            just_started = False
 
-        # Handle low-light conditions with different thresholds
-        if brightness < LOW_LIGHT_THRESHOLD_45 and len(frame_buffer) == 3:
-            # If brightness is below 45, combine the current frame with the previous two frames
+        # Check how much time has passed since the last threshold switch
+        time_since_last_switch = time.time() - last_threshold_switch_time
+        print(current_threshold)
+
+        # Handle low-light conditions with different thresholds, with cooldown to prevent rapid switching
+        # if time_since_last_switch > COOLDOWN_TIME:
+        # TODO - figure this out
+        if brightness < LOW_LIGHT_THRESHOLD_2 and time_since_last_switch > COOLDOWN_TIME:
+            # If brightness is below LLT2, combine the current frame with the previous two frames
             frame = add_frames(frame_buffer[-1], frame_buffer[-2], frame_buffer[-3])
-        elif brightness < LOW_LIGHT_THRESHOLD_65 and len(frame_buffer) >= 2:
-            # If brightness is between 45 and 65, combine the current frame with the previous frame
+            current_threshold = "LOW_LIGHT_THRESHOLD_2"  # Update the current threshold
+            print(first_trigger)
+            first_trigger = False
+            # last_threshold_switch_time = time.time()  # Reset the cooldown timer
+        elif brightness < LOW_LIGHT_THRESHOLD_1 and brightness > LOW_LIGHT_THRESHOLD_2 and time_since_last_switch > COOLDOWN_TIME:
+            # If brightness is between LLT1 and LLT2, combine the current frame with the previous frame
             frame = add_frames(frame_buffer[-1], frame_buffer[-2])
+            current_threshold = "LOW_LIGHT_THRESHOLD_1"  # Update the current threshold
+            print(first_trigger)
+            first_trigger = False
+            # last_threshold_switch_time = time.time()  # Reset the cooldown timer
+        else:
+            current_threshold = None  # Use default threshold if brightness is above 65
+            print(first_trigger)
+            first_trigger = False
 
         # Perform instance segmentation
         segmentation_results = detector.segment(frame)
@@ -123,7 +158,7 @@ def main(source):
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
-        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD_65)
+        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD_1)
 
         # Show the frame with instance segmentation and brightness applied
         cv2.imshow('YOLOv8 Instance Segmentation with Moving Labels and Temporal Smoothing', frame)
