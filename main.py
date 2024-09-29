@@ -18,13 +18,13 @@ DETECTION_THRESHOLD = 3
 
 # Brightness thresholds for low-light conditions
 LOW_LIGHT_THRESHOLD_1 = 65
-LOW_LIGHT_THRESHOLD_2 = 45
+LOW_LIGHT_THRESHOLD_2 = 30
 
 # Frame buffer size (store the most recent 3 frames)
 FRAME_BUFFER_SIZE = 3
 
 # Cooldown time (in seconds) to prevent switching between brightness thresholds too quickly
-COOLDOWN_TIME = 3  # 3 seconds
+COOLDOWN_TIME = 1.5
 
 def add_frames(*frames):
     """
@@ -114,7 +114,6 @@ def main(source):
 
         # Check how much time has passed since the last threshold switch
         time_since_last_switch = time.time() - last_threshold_switch_time
-        print(current_threshold)
 
         # Select which light threshold to use, with cooldown to prevent rapid switching
         if time_since_last_switch > COOLDOWN_TIME:
@@ -156,7 +155,7 @@ def main(source):
             frame = apply_instance_mask(frame, masks, class_ids, classes)
 
         # Calculate and display brightness
-        frame = display_brightness(frame, brightness, LOW_LIGHT_THRESHOLD_1)
+        frame = display_brightness(frame, brightness, current_threshold)
 
         # Show the frame with instance segmentation and brightness applied
         cv2.imshow('YOLOv8 Instance Segmentation with Moving Labels and Temporal Smoothing', frame)

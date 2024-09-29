@@ -17,8 +17,8 @@ def camera_settings(cap, auto_focus=False, focus_value=255):
     cap.set(cv2.CAP_PROP_FPS, 30.0)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('m','j','p','g'))
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M','J','P','G'))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1365)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 768)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
     if auto_focus:
         # Enable auto-focus

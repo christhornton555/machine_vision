@@ -15,7 +15,7 @@ def calculate_brightness(frame):
     brightness = np.mean(hsv[:, :, 2])  # V channel represents brightness
     return brightness
 
-def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
+def display_brightness(frame, pre_calculated_brightness, current_threshold):
     """
     Calculate and display the brightness value on the frame.
 
@@ -34,8 +34,11 @@ def display_brightness(frame, pre_calculated_brightness, low_light_threshold):
     # Draw the brightness in the top-right corner (color: 255, 127, 255)
     cv2.putText(frame, brightness_text, (w - 240, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 127, 255), 2)
 
-    if pre_calculated_brightness < low_light_threshold:
-        low_light_warning = 'LOW'
+    if current_threshold == "LOW_LIGHT_THRESHOLD_1":
+        low_light_warning = 'LOW1'
+        cv2.putText(frame, low_light_warning, (w - 86, 57), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+    elif current_threshold == "LOW_LIGHT_THRESHOLD_2":
+        low_light_warning = 'LOW2'
         cv2.putText(frame, low_light_warning, (w - 86, 57), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
     
     return frame
