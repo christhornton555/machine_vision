@@ -93,7 +93,6 @@ def main(source):
 
     # Use a simple flag to track if the app has just started, to negate the risk of an empty frame buffer
     just_started = True
-    first_trigger = True
 
     while True:
         ret, frame = video_capture.read()
