@@ -103,3 +103,48 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         cv2.putText(frame, label, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), label_thickness)
 
     return frame
+
+def draw_skeleton(frame, keypoints, connections, colors):
+    """
+    Draw a color-coded skeleton on a person based on keypoints and connections.
+
+    Args:
+        frame (np.array): The video frame.
+        keypoints (np.array): The array of keypoints for a person (x, y, confidence).
+        connections (list): List of tuples defining the connections between keypoints.
+        colors (dict): A dictionary of colors for left, right, and center parts of the skeleton.
+
+    Returns:
+        np.array: The frame with the skeleton drawn.
+    """
+    print('skele')  # TODO - testing
+    keypoint_count = keypoints.shape[0]  # Get the total number of detected keypoints
+    
+    for start_idx, end_idx in connections:
+        # Ensure both keypoints exist within the detected keypoints array
+        if start_idx < keypoint_count and end_idx < keypoint_count:
+            start_point = keypoints[start_idx]
+            end_point = keypoints[end_idx]
+
+            # Check if both keypoints have a high enough confidence to be drawn
+            if start_point[2] > 0.5 and end_point[2] > 0.5:
+                start_x, start_y = int(start_point[0]), int(start_point[1])
+                end_x, end_y = int(end_point[0]), int(end_point[1])
+
+                # Assign the color based on the connection type (left, right, or center)
+                if start_idx in [5, 6, 7, 9, 10, 11]:  # Left side keypoints
+                    color = colors['left']
+                elif start_idx in [2, 3, 4, 8, 9, 10]:  # Right side keypoints
+                    color = colors['right']
+                else:  # Central parts (neck, spine, pelvis, etc.)
+                    color = colors['center']
+
+                # Draw the line connecting the two keypoints
+                cv2.line(frame, (start_x, start_y), (end_x, end_y), color, 2)
+
+                # Draw circles on the keypoints
+                cv2.circle(frame, (start_x, start_y), 4, color, -1)
+                cv2.circle(frame, (end_x, end_y), 4, color, -1)
+
+    return frame
+
