@@ -131,9 +131,9 @@ def draw_skeleton(frame, keypoints, connections, colors):
                 end_x, end_y = int(end_point[0]), int(end_point[1])
 
                 # Assign the color based on the connection type (left, right, or center)
-                if start_idx in [5, 6, 7, 9, 10, 11]:  # Left side keypoints
+                if start_idx in [5, 7, 11, 13, 15]:  # Left side keypoints
                     color = colors['left']
-                elif start_idx in [2, 3, 4, 8, 9, 10]:  # Right side keypoints
+                elif start_idx in [6, 8, 12, 14, 16]:  # Right side keypoints
                     color = colors['right']
                 else:  # Central parts (neck, spine, pelvis, etc.)
                     color = colors['center']
