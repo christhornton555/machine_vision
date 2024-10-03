@@ -44,24 +44,7 @@ OPENPOSE_CONNECTIONS = [
     (12, 14), # Right Hip to Knee
     (14, 16), # Right Knee to Ankle
     (0, 5),   # Nose to Left Shoulder
-    (0, 6),   # Nose to Right Shoulder
-    # (0, 1),  # Nose -> Neck
-    # (1, 2),  # Neck -> Right Shoulder
-    # (2, 3),  # Right Shoulder -> Right Elbow
-    # (3, 4),  # Right Elbow -> Right Wrist
-    # (1, 5),  # Neck -> Left Shoulder
-    # (5, 6),  # Left Shoulder -> Left Elbow
-    # (6, 7),  # Left Elbow -> Left Wrist
-    # (1, 8),  # Neck -> Right Hip
-    # (8, 9),  # Right Hip -> Right Knee
-    # (9, 10), # Right Knee -> Right Ankle
-    # (1, 11), # Neck -> Left Hip
-    # (11, 12),# Left Hip -> Left Knee
-    # (12, 13),# Left Knee -> Left Ankle
-    # (0, 14), # Nose -> Right Eye
-    # (0, 15), # Nose -> Left Eye
-    # (14, 16),# Right Eye -> Right Ear
-    # (15, 17) # Left Eye -> Left Ear
+    (0, 6)   # Nose to Right Shoulder
 ]
 
 # Skeleton color scheme
@@ -214,6 +197,8 @@ def main(source):
 
                             # Draw skeleton
                             frame = draw_skeleton(frame, keypoints, OPENPOSE_CONNECTIONS, SKELETON_COLORS)
+                    else:
+                        print("No keypoints detected for this frame.")
 
         # Calculate and display brightness
         frame = display_brightness(frame, brightness, current_threshold)
