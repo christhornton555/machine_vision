@@ -131,12 +131,38 @@ def draw_skeleton(frame, keypoints, connections, colors):
                 end_x, end_y = int(end_point[0]), int(end_point[1])
 
                 # Assign the color based on the connection type (left, right, or center)
-                if start_idx in [5, 7, 11, 13, 15]:  # Left side keypoints
-                    color = colors['left']
-                elif start_idx in [6, 8, 12, 14, 16]:  # Right side keypoints
-                    color = colors['right']
-                else:  # Central parts (neck, spine, pelvis, etc.)
-                    color = colors['center']
+                if (start_idx, end_idx) == (6, 5):
+                    color = colors['right_shoulderblade']  # TODO - modify once a neck is added
+                elif (start_idx, end_idx) == (6, 8):
+                    color = colors['right_arm']
+                elif (start_idx, end_idx) == (8, 10):
+                    color = colors['right_forearm']
+                elif (start_idx, end_idx) == (5, 7):
+                    color = colors['left_arm']
+                elif (start_idx, end_idx) == (7, 9):
+                    color = colors['left_forearm']
+                elif (start_idx, end_idx) == (6, 12):
+                    color = colors['right_torso']
+                elif (start_idx, end_idx) == (12, 14):
+                    color = colors['right_upper_leg']
+                elif (start_idx, end_idx) == (14, 16):
+                    color = colors['right_lower_leg']
+                elif (start_idx, end_idx) == (5, 11):
+                    color = colors['left_torso']
+                elif (start_idx, end_idx) == (11, 13):
+                    color = colors['left_upper_leg']
+                elif (start_idx, end_idx) == (13, 15):
+                    color = colors['left_lower_leg']
+                elif (start_idx, end_idx) == (0, 2):
+                    color = colors['right_eyebrow']
+                elif (start_idx, end_idx) == (2, 4):
+                    color = colors['right_ear']
+                elif (start_idx, end_idx) == (0, 1):
+                    color = colors['left_eyebrow']
+                elif (start_idx, end_idx) == (1, 3):
+                    color = colors['left_ear']
+                else:  # default fallback, just in case
+                    color = colors['default']
 
                 # Draw the line connecting the two keypoints
                 cv2.line(frame, (start_x, start_y), (end_x, end_y), color, 2)
