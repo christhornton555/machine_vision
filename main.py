@@ -31,20 +31,37 @@ MIN_PERSON_SIZE = 0.02  # Fraction of the frame size (e.g., 20%)
 
 # OpenPose-like connections for limbs
 OPENPOSE_CONNECTIONS = [
-    (0, 1),  # Nose to Neck
-    (1, 2),  # Neck to Right Shoulder
-    (1, 5),  # Neck to Left Shoulder
-    (2, 3),  # Right Shoulder to Right Elbow
-    (3, 4),  # Right Elbow to Right Wrist
-    (5, 6),  # Left Shoulder to Left Elbow
-    (6, 7),  # Left Elbow to Left Wrist
-    (1, 8),  # Neck to Pelvis
-    (8, 9),  # Pelvis to Right Hip
-    (9, 10), # Right Hip to Right Knee
-    (10, 11), # Right Knee to Right Ankle
-    (8, 12), # Pelvis to Left Hip
-    (12, 13), # Left Hip to Left Knee
-    (13, 14)  # Left Knee to Left Ankle
+    (5, 6),   # Shoulders
+    (5, 7),   # Left Shoulder to Elbow
+    (7, 9),   # Left Elbow to Wrist
+    (6, 8),   # Right Shoulder to Elbow
+    (8, 10),  # Right Elbow to Wrist
+    (11, 12), # Hips
+    (5, 11),  # Left Shoulder to Left Hip
+    (6, 12),  # Right Shoulder to Right Hip
+    (11, 13), # Left Hip to Knee
+    (13, 15), # Left Knee to Ankle
+    (12, 14), # Right Hip to Knee
+    (14, 16), # Right Knee to Ankle
+    (0, 5),   # Nose to Left Shoulder
+    (0, 6),   # Nose to Right Shoulder
+    # (0, 1),  # Nose -> Neck
+    # (1, 2),  # Neck -> Right Shoulder
+    # (2, 3),  # Right Shoulder -> Right Elbow
+    # (3, 4),  # Right Elbow -> Right Wrist
+    # (1, 5),  # Neck -> Left Shoulder
+    # (5, 6),  # Left Shoulder -> Left Elbow
+    # (6, 7),  # Left Elbow -> Left Wrist
+    # (1, 8),  # Neck -> Right Hip
+    # (8, 9),  # Right Hip -> Right Knee
+    # (9, 10), # Right Knee -> Right Ankle
+    # (1, 11), # Neck -> Left Hip
+    # (11, 12),# Left Hip -> Left Knee
+    # (12, 13),# Left Knee -> Left Ankle
+    # (0, 14), # Nose -> Right Eye
+    # (0, 15), # Nose -> Left Eye
+    # (14, 16),# Right Eye -> Right Ear
+    # (15, 17) # Left Eye -> Left Ear
 ]
 
 # Skeleton color scheme
@@ -154,6 +171,7 @@ def main(source):
 
         # Perform pose detection for skeleton tracking
         pose_results = detector.detect_pose(frame)
+        # print(pose_results[0].keypoints)
 
         # Add current segmentation results to the buffer (only if valid results exist)
         if segmentation_results[0].boxes is not None and len(segmentation_results[0].boxes.cls) > 0:
@@ -176,10 +194,9 @@ def main(source):
             for i, class_id in enumerate(class_ids):
                 if classes[class_id] == "person":
                     # Check if keypoints are available from the pose model
-                    if pose_results[0].keypoints is not None and len(pose_results[0].keypoints) > i:
+                    if pose_results[0].keypoints is not None and len(pose_results[0].keypoints.data) > i:
                         # Get bounding box for the person
                         x1, y1, x2, y2 = boxes[i]
-                        print(x1, y1, x2, y2)  # TODO - testing
 
                         # Calculate the size of the bounding box relative to the frame size
                         box_area = (x2 - x1) * (y2 - y1)
@@ -188,8 +205,13 @@ def main(source):
 
                         # Only track skeleton if person is sufficiently large in the frame
                         if relative_size > MIN_PERSON_SIZE:
-                            # Extract keypoints
-                            keypoints = pose_results[0].keypoints[i].cpu().numpy()
+                            # Extract keypoints: xy contains the coordinates, conf contains confidence values
+                            keypoints_xy = pose_results[0].keypoints.xy[i].cpu().numpy()  # (x, y) coordinates
+                            keypoints_conf = pose_results[0].keypoints.conf[i].cpu().numpy()  # confidence values
+
+                            # Create a combined keypoints array (x, y, conf) for drawing
+                            keypoints = np.hstack((keypoints_xy, keypoints_conf[:, np.newaxis]))
+
                             # Draw skeleton
                             frame = draw_skeleton(frame, keypoints, OPENPOSE_CONNECTIONS, SKELETON_COLORS)
 

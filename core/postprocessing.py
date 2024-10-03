@@ -117,9 +117,8 @@ def draw_skeleton(frame, keypoints, connections, colors):
     Returns:
         np.array: The frame with the skeleton drawn.
     """
-    print('skele')  # TODO - testing
-    keypoint_count = keypoints.shape[0]  # Get the total number of detected keypoints
-    
+    keypoint_count = keypoints.shape[0]  # Get the total number of detected keypoints (should be 17 now)
+
     for start_idx, end_idx in connections:
         # Ensure both keypoints exist within the detected keypoints array
         if start_idx < keypoint_count and end_idx < keypoint_count:
