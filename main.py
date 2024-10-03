@@ -52,21 +52,19 @@ BODY_PARTS = {
 
 # OpenPose-like connections for limbs
 OPENPOSE_CONNECTIONS = [
-    (BODY_PARTS['RShoulder'], BODY_PARTS['LShoulder']),  # Right Shoulder to Left Shoulder - TODO - need neck
+    # Neck placement will be calculated in postprocessing, then those connections made
     (BODY_PARTS['RShoulder'], BODY_PARTS['RElbow']),  # Right Shoulder to Right Elbow
     (BODY_PARTS['RElbow'], BODY_PARTS['RWrist']),  # Right Elbow to Right Wrist
     (BODY_PARTS['LShoulder'], BODY_PARTS['LElbow']),  # Left Shoulder to Left Elbow
     (BODY_PARTS['LElbow'], BODY_PARTS['LWrist']),  # Left Elbow to Left Wrist
-    (BODY_PARTS['RShoulder'], BODY_PARTS['RHip']),  # Right Shoulder to Right Hip - TODO - need neck
     (BODY_PARTS['RHip'], BODY_PARTS['RKnee']),  # Right Hip to Right Knee
     (BODY_PARTS['RKnee'], BODY_PARTS['RAnkle']),  # Right Knee to Right Ankle
-    (BODY_PARTS['LShoulder'], BODY_PARTS['LHip']),  # Left Shoulder to Left Hip - TODO - need neck
     (BODY_PARTS['LHip'], BODY_PARTS['LKnee']),  # Left Hip to Left Knee
     (BODY_PARTS['LKnee'], BODY_PARTS['LAnkle']),  # Left Knee to Left Ankle
     (BODY_PARTS['Nose'], BODY_PARTS['REye']),  # Nose to Right Eye
     (BODY_PARTS['REye'], BODY_PARTS['REar']),  # Right Eye to Right Ear
     (BODY_PARTS['Nose'], BODY_PARTS['LEye']),  # Nose to Left Eye
-    (BODY_PARTS['LEye'], BODY_PARTS['LEar']),  # Left Eye to Left Ear
+    (BODY_PARTS['LEye'], BODY_PARTS['LEar'])  # Left Eye to Left Ear
 ]
 
 # Skeleton color scheme
@@ -261,4 +259,3 @@ if __name__ == "__main__":
     video_source = 0 if args.video is None else args.video
 
     main(source=video_source)
-

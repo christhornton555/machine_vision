@@ -119,6 +119,25 @@ def draw_skeleton(frame, keypoints, connections, colors):
     """
     keypoint_count = keypoints.shape[0]  # Get the total number of detected keypoints (should be 17 now)
 
+    # Check if both left and right shoulders are present with confidence
+    if keypoints[5][2] > 0.5 and keypoints[6][2] > 0.5:
+        # Calculate the neck keypoint as the midpoint between the shoulders, LShoulder = 5, RShoulder = 6
+        neck_x = (keypoints[5][0] + keypoints[6][0]) / 2
+        neck_y = (keypoints[5][1] + keypoints[6][1]) / 2
+        neck_conf = (keypoints[5][2] + keypoints[6][2]) / 2
+
+        # Append the neck keypoint to the keypoints array (x, y, confidence)
+        neck_keypoint = np.array([neck_x, neck_y, neck_conf])
+        keypoints = np.vstack([keypoints, neck_keypoint])
+        keypoint_count = keypoints.shape[0]  # Update this if a neck has been calculated
+
+        # Add connections for neck
+        connections.append((17, 0))  # Connecting nose to neck
+        connections.append((17, 5))  # Connecting neck to rshoulder
+        connections.append((17, 6))  # Connecting neck to lshoulder
+        connections.append((17, 11))  # Connecting neck to rhip
+        connections.append((17, 12))  # Connecting neck to lhip
+
     for start_idx, end_idx in connections:
         # Ensure both keypoints exist within the detected keypoints array
         if start_idx < keypoint_count and end_idx < keypoint_count:
@@ -131,8 +150,10 @@ def draw_skeleton(frame, keypoints, connections, colors):
                 end_x, end_y = int(end_point[0]), int(end_point[1])
 
                 # Assign the color based on the connection type (left, right, or center)
-                if (start_idx, end_idx) == (6, 5):
-                    color = colors['right_shoulderblade']  # TODO - modify once a neck is added
+                if (start_idx, end_idx) == (17, 5):
+                    color = colors['right_shoulderblade']
+                elif (start_idx, end_idx) == (17, 6):
+                    color = colors['left_shoulderblade']
                 elif (start_idx, end_idx) == (6, 8):
                     color = colors['right_arm']
                 elif (start_idx, end_idx) == (8, 10):
@@ -141,18 +162,20 @@ def draw_skeleton(frame, keypoints, connections, colors):
                     color = colors['left_arm']
                 elif (start_idx, end_idx) == (7, 9):
                     color = colors['left_forearm']
-                elif (start_idx, end_idx) == (6, 12):
+                elif (start_idx, end_idx) == (17, 12):
                     color = colors['right_torso']
                 elif (start_idx, end_idx) == (12, 14):
                     color = colors['right_upper_leg']
                 elif (start_idx, end_idx) == (14, 16):
                     color = colors['right_lower_leg']
-                elif (start_idx, end_idx) == (5, 11):
+                elif (start_idx, end_idx) == (17, 11):
                     color = colors['left_torso']
                 elif (start_idx, end_idx) == (11, 13):
                     color = colors['left_upper_leg']
                 elif (start_idx, end_idx) == (13, 15):
                     color = colors['left_lower_leg']
+                elif (start_idx, end_idx) == (17, 0):
+                    color = colors['head']
                 elif (start_idx, end_idx) == (0, 2):
                     color = colors['right_eyebrow']
                 elif (start_idx, end_idx) == (2, 4):
@@ -172,4 +195,3 @@ def draw_skeleton(frame, keypoints, connections, colors):
                 cv2.circle(frame, (end_x, end_y), 4, color, -1)
 
     return frame
-
