@@ -27,7 +27,7 @@ FRAME_BUFFER_SIZE = 3
 COOLDOWN_TIME = 2
 
 # Threshold for deciding if a person is large enough in the frame
-MIN_PERSON_SIZE = 0.2  # Fraction of the frame size (e.g., 20%)
+MIN_PERSON_SIZE = 0.0001  # Fraction of the frame size (e.g., 20%)
 
 # OpenPose-like body parts
 BODY_PARTS = {
@@ -222,7 +222,7 @@ def main(source):
                         relative_size = box_area / frame_area
 
                         # Only track skeleton if person is sufficiently large in the frame
-                        if relative_size > MIN_PERSON_SIZE:
+                        if relative_size > MIN_PERSON_SIZE and pose_results[0].keypoints.conf is not None:
                             # Extract keypoints: xy contains the coordinates, conf contains confidence values
                             keypoints_xy = pose_results[0].keypoints.xy[i].cpu().numpy()  # (x, y) coordinates
                             keypoints_conf = pose_results[0].keypoints.conf[i].cpu().numpy()  # confidence values
