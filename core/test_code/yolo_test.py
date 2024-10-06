@@ -25,7 +25,7 @@ model.to(device)  # Move model to the specified device (CPU or GPU)
 
 # Initialize dlib's face detector and facial landmark predictor
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor('models/shape_predictor_68_face_landmarks.dat')
 
 # Initialize Mediapipe for hand tracking
 mp_hands = mp.solutions.hands

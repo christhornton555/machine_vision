@@ -10,6 +10,7 @@ class HandTracker:
             min_tracking_confidence=tracking_confidence
         )
         self.mp_draw = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
         self.hand_connections = self.mp_hands.HAND_CONNECTIONS
 
     def detect_hands(self, frame):
@@ -36,5 +37,11 @@ class HandTracker:
         """
         if hand_landmarks:
             for hand_landmark in hand_landmarks:
-                self.mp_draw.draw_landmarks(frame, hand_landmark, self.hand_connections)
+                self.mp_draw.draw_landmarks(
+                    frame,
+                    hand_landmark,
+                    self.hand_connections,
+                    self.mp_drawing_styles.get_default_hand_landmarks_style(),  # Default landmark style
+                    self.mp_drawing_styles.get_default_hand_connections_style()  # Default connection style
+                )
         return frame
