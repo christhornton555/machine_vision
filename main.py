@@ -16,8 +16,9 @@ from config.config import (
     SKELETON_COLORS,
     KEYPOINT_COLORS,
     VIDEO_OUTPUT_FILENAME,
-    VIDEO_CODEC,
-    FPS
+    FPS,
+    RESCALE_VIDEO_OUTPUT,
+    VIDEO_OUTPUT_RESOLUTION
 )
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
@@ -70,11 +71,18 @@ def main(source, save_output):
     # Get video dimensions from the input stream
     frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    if save_output and RESCALE_VIDEO_OUTPUT:
+        # Resize to a smaller resolution to reduce the file size (optional)
+        target_width, target_height = VIDEO_OUTPUT_RESOLUTION[0], VIDEO_OUTPUT_RESOLUTION[1]
+    elif save_output and not RESCALE_VIDEO_OUTPUT:
+        target_width = frame_width
+        target_height = frame_height
 
     # Initialize VideoWriter to save the output video
     if save_output:
-        fourcc = cv2.VideoWriter_fourcc(*VIDEO_CODEC)
-        video_writer = cv2.VideoWriter(VIDEO_OUTPUT_FILENAME, fourcc, FPS, (frame_width, frame_height))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # H.264 codec with .mp4 format
+        video_writer = cv2.VideoWriter(VIDEO_OUTPUT_FILENAME, fourcc, FPS, (target_width, target_height))
 
     # Initialize the object detector with both segmentation and pose models
     segmentation_model_path = 'models/yolov8n-seg.pt'
@@ -184,7 +192,11 @@ def main(source, save_output):
         frame = display_brightness(frame, brightness, current_threshold)
 
         # Write the frame to the video file
-        if save_output:
+        if save_output and RESCALE_VIDEO_OUTPUT:
+            # Resize to a smaller resolution to reduce the file size (optional)
+            frame_resized = cv2.resize(frame, (target_width, target_height))
+            video_writer.write(frame_resized)
+        elif save_output and not RESCALE_VIDEO_OUTPUT:
             video_writer.write(frame)
 
         # Show the frame with instance segmentation, skeleton, and brightness applied

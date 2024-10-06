@@ -17,7 +17,7 @@ FRAME_BUFFER_SIZE = 3
 COOLDOWN_TIME = 2
 
 # Threshold for deciding if a person is large enough in the frame
-MIN_PERSON_SIZE = 0.2  # Fraction of the frame size (e.g., 20%)
+MIN_PERSON_SIZE = 0.000001  # Fraction of the frame size (e.g., 20%)
 
 # OpenPose-like body parts
 BODY_PARTS = {
@@ -101,9 +101,10 @@ KEYPOINT_COLORS = {
 }
 
 # Video output filename and codec
-VIDEO_OUTPUT_FILENAME = 'output/output_video.avi'
-VIDEO_CODEC = 'MJPG'  # Can also use 'XVID', 'DIVX', etc.
+VIDEO_OUTPUT_FILENAME = 'output/output_video.mp4'
 FPS = 25  # Desired framerate of the output video
+RESCALE_VIDEO_OUTPUT = False  # Change resolution of output video?
+VIDEO_OUTPUT_RESOLUTION = [640, 480]  # Resolution to use if above value set to True
 
 
 def select_device(prefer_gpu=True):
