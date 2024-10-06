@@ -14,7 +14,10 @@ from config.config import (
     MIN_PERSON_SIZE,
     OPENPOSE_CONNECTIONS,
     SKELETON_COLORS,
-    KEYPOINT_COLORS
+    KEYPOINT_COLORS,
+    VIDEO_OUTPUT_FILENAME,
+    VIDEO_CODEC,
+    FPS
 )
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
@@ -63,6 +66,14 @@ def main(source):
     if source == 0:
         # Set manual focus for the Logitech C920
         camera_settings(video_capture, auto_focus=False, focus_value=255)
+
+    # Get video dimensions from the input stream
+    frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # Initialize VideoWriter to save the output video
+    fourcc = cv2.VideoWriter_fourcc(*VIDEO_CODEC)
+    video_writer = cv2.VideoWriter(VIDEO_OUTPUT_FILENAME, fourcc, FPS, (frame_width, frame_height))
 
     # Initialize the object detector with both segmentation and pose models
     segmentation_model_path = 'models/yolov8n-seg.pt'
@@ -171,6 +182,9 @@ def main(source):
         # Calculate and display brightness
         frame = display_brightness(frame, brightness, current_threshold)
 
+        # Write the frame to the video file
+        video_writer.write(frame)
+
         # Show the frame with instance segmentation, skeleton, and brightness applied
         cv2.imshow('YOLOv8 Segmentation and Pose Detection', frame)
 
@@ -180,6 +194,7 @@ def main(source):
 
     # Release the video capture object and close all windows
     video_capture.release()
+    video_writer.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":

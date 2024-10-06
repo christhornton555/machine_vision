@@ -100,6 +100,11 @@ KEYPOINT_COLORS = {
     17: (0, 85, 255),  # Neck keypoint is calculated, to mimic the OpenPose model
 }
 
+# Video output filename and codec
+VIDEO_OUTPUT_FILENAME = 'output/output_video.avi'
+VIDEO_CODEC = 'MJPG'  # Can also use 'XVID', 'DIVX', etc.
+FPS = 30  # Desired framerate of the output video
+
 
 def select_device(prefer_gpu=True):
     """
