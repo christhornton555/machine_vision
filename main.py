@@ -12,6 +12,7 @@ from config.config import (
     FRAME_BUFFER_SIZE,
     COOLDOWN_TIME,
     MIN_PERSON_SIZE,
+    MAX_HANDS,
     OPENPOSE_CONNECTIONS,
     SKELETON_COLORS,
     KEYPOINT_COLORS,
@@ -22,6 +23,7 @@ from config.config import (
 )
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
+from core.hand_tracking import HandTracker
 from core.postprocessing import apply_instance_mask, display_brightness, draw_skeleton
 from core.camera_control import camera_settings
 from core.postprocessing import calculate_brightness
@@ -65,7 +67,7 @@ def main(source, save_output):
     video_capture = get_video_stream(source=source)
 
     if source == 0:
-        # Set manual focus for the Logitech C920
+        # Try to set manual focus for the camera
         camera_settings(video_capture, auto_focus=False, focus_value=255)
 
     # Get video dimensions from the input stream
@@ -88,6 +90,9 @@ def main(source, save_output):
     segmentation_model_path = 'models/yolov8n-seg.pt'
     pose_model_path = 'models/yolov8n-pose.pt'
     detector = ObjectDetector(segmentation_model_path, pose_model_path, device)
+
+    # Initialize the hand tracker
+    hand_tracker = HandTracker(max_hands=MAX_HANDS)
 
     detection_buffer = deque(maxlen=BUFFER_SIZE)  # Initialize the detection buffer
     frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the three most recent frames
@@ -142,7 +147,9 @@ def main(source, save_output):
 
         # Perform pose detection for skeleton tracking
         pose_results = detector.detect_pose(frame)
-        # print(pose_results[0].keypoints)
+
+        # Detect hand landmarks
+        hand_landmarks = hand_tracker.detect_hands(frame)
 
         # Add current segmentation results to the buffer (only if valid results exist)
         if segmentation_results[0].boxes is not None and len(segmentation_results[0].boxes.cls) > 0:
@@ -188,6 +195,9 @@ def main(source, save_output):
                     else:
                         print("No keypoints detected for this frame.")
 
+        # Draw hand landmarks
+        frame = hand_tracker.draw_hands(frame, hand_landmarks)
+
         # Calculate and display brightness
         frame = display_brightness(frame, brightness, current_threshold)
 
@@ -200,7 +210,7 @@ def main(source, save_output):
             video_writer.write(frame)
 
         # Show the frame with instance segmentation, skeleton, and brightness applied
-        cv2.imshow('YOLOv8 Segmentation and Pose Detection', frame)
+        cv2.imshow('YOLOv8 Segmentation and Pose Detection with Hand Tracking', frame)
 
         # Press 'q' to quit the video stream
         if cv2.waitKey(1) & 0xFF == ord('q'):

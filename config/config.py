@@ -19,6 +19,9 @@ COOLDOWN_TIME = 2
 # Threshold for deciding if a person is large enough in the frame
 MIN_PERSON_SIZE = 0.000001  # Fraction of the frame size (e.g., 20%)
 
+# Maximum number of hands to detect
+MAX_HANDS = 2
+
 # OpenPose-like body parts
 BODY_PARTS = {
     "Nose": 0,
