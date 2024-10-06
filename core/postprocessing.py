@@ -103,3 +103,100 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
         cv2.putText(frame, label, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), label_thickness)
 
     return frame
+
+def draw_skeleton(frame, keypoints, connections, colors, keypoint_colors):
+    """
+    Draw a color-coded skeleton on a person based on keypoints and connections.
+
+    Args:
+        frame (np.array): The video frame.
+        keypoints (np.array): The array of keypoints for a person (x, y, confidence).
+        connections (list): List of tuples defining the connections between keypoints.
+        colors (dict): A dictionary of colors for left, right, and center parts of the skeleton.
+
+    Returns:
+        np.array: The frame with the skeleton drawn.
+    """
+    keypoint_count = keypoints.shape[0]  # Get the total number of detected keypoints (should be 17 now)
+
+    # Check if both left and right shoulders are present with confidence
+    if keypoints[5][2] > 0.5 and keypoints[6][2] > 0.5:
+        # Calculate the neck keypoint as the midpoint between the shoulders, LShoulder = 5, RShoulder = 6
+        neck_x = (keypoints[5][0] + keypoints[6][0]) / 2
+        neck_y = (keypoints[5][1] + keypoints[6][1]) / 2
+        neck_conf = (keypoints[5][2] + keypoints[6][2]) / 2
+
+        # Append the neck keypoint to the keypoints array (x, y, confidence)
+        neck_keypoint = np.array([neck_x, neck_y, neck_conf])
+        keypoints = np.vstack([keypoints, neck_keypoint])
+        keypoint_count = keypoints.shape[0]  # Update this if a neck has been calculated
+
+        # Add connections for neck
+        connections.append((17, 0))  # Connecting nose to neck
+        connections.append((17, 5))  # Connecting neck to rshoulder
+        connections.append((17, 6))  # Connecting neck to lshoulder
+        connections.append((17, 11))  # Connecting neck to rhip
+        connections.append((17, 12))  # Connecting neck to lhip
+
+    for start_idx, end_idx in connections:
+        # Ensure both keypoints exist within the detected keypoints array
+        if start_idx < keypoint_count and end_idx < keypoint_count:
+            start_point = keypoints[start_idx]
+            end_point = keypoints[end_idx]
+
+            # Check if both keypoints have a high enough confidence to be drawn
+            if start_point[2] > 0.5 and end_point[2] > 0.5:
+                start_x, start_y = int(start_point[0]), int(start_point[1])
+                end_x, end_y = int(end_point[0]), int(end_point[1])
+
+                # Assign the color based on the connection type (left, right, or center)
+                if (start_idx, end_idx) == (17, 5):
+                    color = colors['right_shoulderblade']
+                elif (start_idx, end_idx) == (17, 6):
+                    color = colors['left_shoulderblade']
+                elif (start_idx, end_idx) == (6, 8):
+                    color = colors['right_arm']
+                elif (start_idx, end_idx) == (8, 10):
+                    color = colors['right_forearm']
+                elif (start_idx, end_idx) == (5, 7):
+                    color = colors['left_arm']
+                elif (start_idx, end_idx) == (7, 9):
+                    color = colors['left_forearm']
+                elif (start_idx, end_idx) == (17, 12):
+                    color = colors['right_torso']
+                elif (start_idx, end_idx) == (12, 14):
+                    color = colors['right_upper_leg']
+                elif (start_idx, end_idx) == (14, 16):
+                    color = colors['right_lower_leg']
+                elif (start_idx, end_idx) == (17, 11):
+                    color = colors['left_torso']
+                elif (start_idx, end_idx) == (11, 13):
+                    color = colors['left_upper_leg']
+                elif (start_idx, end_idx) == (13, 15):
+                    color = colors['left_lower_leg']
+                elif (start_idx, end_idx) == (17, 0):
+                    color = colors['head']
+                elif (start_idx, end_idx) == (0, 2):
+                    color = colors['right_eyebrow']
+                elif (start_idx, end_idx) == (2, 4):
+                    color = colors['right_ear']
+                elif (start_idx, end_idx) == (0, 1):
+                    color = colors['left_eyebrow']
+                elif (start_idx, end_idx) == (1, 3):
+                    color = colors['left_ear']
+                else:  # default fallback, just in case
+                    color = colors['default']
+
+                # Draw the line connecting the two keypoints
+                cv2.line(frame, (start_x, start_y), (end_x, end_y), color, 2)
+
+    # Draw circles for the keypoints with their respective colors
+    for i, keypoint in enumerate(keypoints):
+        if keypoint[2] > 0.5:  # Only draw if the keypoint has a high enough confidence
+            keypoint_x, keypoint_y = int(keypoint[0]), int(keypoint[1])
+
+            # Use specific color for the keypoint
+            keypoint_color = keypoint_colors.get(i, (153, 153, 153))  # Default to grey if not specified
+            cv2.circle(frame, (keypoint_x, keypoint_y), 4, keypoint_color, -1)
+
+    return frame
