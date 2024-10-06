@@ -56,7 +56,7 @@ def smooth_detections(detection_buffer):
 
     return smoothed_results[-1] if smoothed_results else None
 
-def main(source):
+def main(source, save_output):
     # Choose between CPU or GPU
     device = select_device(prefer_gpu=True)
 
@@ -72,8 +72,9 @@ def main(source):
     frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Initialize VideoWriter to save the output video
-    fourcc = cv2.VideoWriter_fourcc(*VIDEO_CODEC)
-    video_writer = cv2.VideoWriter(VIDEO_OUTPUT_FILENAME, fourcc, FPS, (frame_width, frame_height))
+    if save_output:
+        fourcc = cv2.VideoWriter_fourcc(*VIDEO_CODEC)
+        video_writer = cv2.VideoWriter(VIDEO_OUTPUT_FILENAME, fourcc, FPS, (frame_width, frame_height))
 
     # Initialize the object detector with both segmentation and pose models
     segmentation_model_path = 'models/yolov8n-seg.pt'
@@ -183,7 +184,8 @@ def main(source):
         frame = display_brightness(frame, brightness, current_threshold)
 
         # Write the frame to the video file
-        video_writer.write(frame)
+        if save_output:
+            video_writer.write(frame)
 
         # Show the frame with instance segmentation, skeleton, and brightness applied
         cv2.imshow('YOLOv8 Segmentation and Pose Detection', frame)
@@ -194,16 +196,18 @@ def main(source):
 
     # Release the video capture object and close all windows
     video_capture.release()
-    video_writer.release()
+    if save_output:
+        video_writer.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     # Parse arguments for choosing the video source
     parser = argparse.ArgumentParser(description='YOLOv8 Segmentation and Pose Detection with Video/Camera')
     parser.add_argument('--video', type=str, default=None, help='Path to an MP4 video file. If not provided, webcam will be used.')
+    parser.add_argument('--save-output', action='store_true', help='Flag to save the output to a video file.')
     args = parser.parse_args()
 
     # Use webcam (source=0) if no video file is provided, otherwise use the provided MP4 file
     video_source = 0 if args.video is None else args.video
 
-    main(source=video_source)
+    main(source=video_source, save_output=args.save_output)

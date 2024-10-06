@@ -103,7 +103,7 @@ KEYPOINT_COLORS = {
 # Video output filename and codec
 VIDEO_OUTPUT_FILENAME = 'output/output_video.avi'
 VIDEO_CODEC = 'MJPG'  # Can also use 'XVID', 'DIVX', etc.
-FPS = 30  # Desired framerate of the output video
+FPS = 25  # Desired framerate of the output video
 
 
 def select_device(prefer_gpu=True):
