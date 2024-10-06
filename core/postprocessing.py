@@ -104,7 +104,7 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
 
     return frame
 
-def draw_skeleton(frame, keypoints, connections, colors):
+def draw_skeleton(frame, keypoints, connections, colors, keypoint_colors):
     """
     Draw a color-coded skeleton on a person based on keypoints and connections.
 
@@ -190,8 +190,13 @@ def draw_skeleton(frame, keypoints, connections, colors):
                 # Draw the line connecting the two keypoints
                 cv2.line(frame, (start_x, start_y), (end_x, end_y), color, 2)
 
-                # Draw circles on the keypoints
-                cv2.circle(frame, (start_x, start_y), 4, color, -1)
-                cv2.circle(frame, (end_x, end_y), 4, color, -1)
+    # Draw circles for the keypoints with their respective colors
+    for i, keypoint in enumerate(keypoints):
+        if keypoint[2] > 0.5:  # Only draw if the keypoint has a high enough confidence
+            keypoint_x, keypoint_y = int(keypoint[0]), int(keypoint[1])
+
+            # Use specific color for the keypoint
+            keypoint_color = keypoint_colors.get(i, (153, 153, 153))  # Default to grey if not specified
+            cv2.circle(frame, (keypoint_x, keypoint_y), 4, keypoint_color, -1)
 
     return frame

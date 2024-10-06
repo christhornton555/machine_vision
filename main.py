@@ -13,7 +13,8 @@ from config.config import (
     COOLDOWN_TIME,
     MIN_PERSON_SIZE,
     OPENPOSE_CONNECTIONS,
-    SKELETON_COLORS
+    SKELETON_COLORS,
+    KEYPOINT_COLORS
 )
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
@@ -163,7 +164,7 @@ def main(source):
                             keypoints = np.hstack((keypoints_xy, keypoints_conf[:, np.newaxis]))
 
                             # Draw skeleton
-                            frame = draw_skeleton(frame, keypoints, OPENPOSE_CONNECTIONS, SKELETON_COLORS)
+                            frame = draw_skeleton(frame, keypoints, OPENPOSE_CONNECTIONS, SKELETON_COLORS, KEYPOINT_COLORS)
                     else:
                         print("No keypoints detected for this frame.")
 

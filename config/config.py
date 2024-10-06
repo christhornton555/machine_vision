@@ -79,6 +79,28 @@ SKELETON_COLORS = {
     'default': (153, 153, 153)  # fallback grey colour
 }
 
+KEYPOINT_COLORS = {
+    BODY_PARTS['Nose']: (0, 0, 255),
+    BODY_PARTS['LEye']: (255, 0, 255),
+    BODY_PARTS['REye']: (255, 0, 170),
+    BODY_PARTS['LEar']: (85, 0, 255),
+    BODY_PARTS['REar']: (170, 0, 255),
+    BODY_PARTS['LShoulder']: (0, 255, 85),
+    BODY_PARTS['RShoulder']: (0, 170, 255),
+    BODY_PARTS['LElbow']: (0, 255, 0),
+    BODY_PARTS['RElbow']: (0, 255, 255),
+    BODY_PARTS['LWrist']: (85, 255, 0),
+    BODY_PARTS['RWrist']: (0, 255, 170),
+    BODY_PARTS['LHip']: (255, 85, 0),
+    BODY_PARTS['RHip']: (170, 255, 0),
+    BODY_PARTS['LKnee']: (255, 0, 0),
+    BODY_PARTS['RKnee']: (255, 255, 0),
+    BODY_PARTS['LAnkle']: (255, 0, 85),
+    BODY_PARTS['RAnkle']: (255, 170, 0),
+    17: (0, 85, 255),  # Neck keypoint is calculated, to mimic the OpenPose model
+}
+
+
 def select_device(prefer_gpu=True):
     """
     Select the device to use for processing: GPU (if available) or CPU.
