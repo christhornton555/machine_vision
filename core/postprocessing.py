@@ -45,7 +45,7 @@ def display_brightness(frame, pre_calculated_brightness, current_threshold):
 
 def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
     """
-    Apply semi-transparent instance segmentation masks to the frame with unique colors and label objects.
+    Apply semi-transparent instance segmentation masks to the frame with unique colours and label objects.
 
     Args:
         frame (np.array): The video frame.
@@ -106,13 +106,14 @@ def apply_instance_mask(frame, masks, class_ids, class_names, alpha=0.5):
 
 def draw_skeleton(frame, keypoints, connections, colors, keypoint_colors):
     """
-    Draw a color-coded skeleton on a person based on keypoints and connections.
+    Draw a colour-coded skeleton on a person based on keypoints and connections.
 
     Args:
         frame (np.array): The video frame.
         keypoints (np.array): The array of keypoints for a person (x, y, confidence).
         connections (list): List of tuples defining the connections between keypoints.
-        colors (dict): A dictionary of colors for left, right, and center parts of the skeleton.
+        colors (dict): A dictionary of colours for each of the bones of the skeleton.
+        keypoint_colors (dict): A dictionary of colours for each of the joints of the skeleton.
 
     Returns:
         np.array: The frame with the skeleton drawn.
