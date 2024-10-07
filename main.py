@@ -13,6 +13,7 @@ from config.config import (
     COOLDOWN_TIME,
     MIN_PERSON_SIZE,
     MAX_HANDS,
+    MAX_FACES,
     OPENPOSE_CONNECTIONS,
     SKELETON_COLORS,
     KEYPOINT_COLORS,
@@ -24,6 +25,7 @@ from config.config import (
 from core.video_capture import get_video_stream
 from core.detection import ObjectDetector
 from core.hand_tracking import HandTracker
+from core.face_tracking import FaceTracker
 from core.postprocessing import apply_instance_mask, display_brightness, draw_skeleton
 from core.camera_control import camera_settings
 from core.postprocessing import calculate_brightness
@@ -94,6 +96,9 @@ def main(source, save_output):
     # Initialize the hand tracker
     hand_tracker = HandTracker(max_hands=MAX_HANDS)
 
+    # Initialize the face tracker
+    face_tracker = FaceTracker(max_faces=MAX_FACES)
+
     detection_buffer = deque(maxlen=BUFFER_SIZE)  # Initialize the detection buffer
     frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)  # Buffer to hold the three most recent frames
 
@@ -151,6 +156,9 @@ def main(source, save_output):
         # Detect hand landmarks
         hand_landmarks = hand_tracker.detect_hands(frame)
 
+        # Detect face landmarks
+        face_landmarks = face_tracker.detect_faces(frame)
+
         # Add current segmentation results to the buffer (only if valid results exist)
         if segmentation_results[0].boxes is not None and len(segmentation_results[0].boxes.cls) > 0:
             detection_buffer.append(segmentation_results[0])
@@ -197,6 +205,9 @@ def main(source, save_output):
 
         # Draw hand landmarks
         frame = hand_tracker.draw_hands(frame, hand_landmarks)
+
+        # Draw face landmarks
+        frame = face_tracker.draw_faces(frame, face_landmarks)
 
         # Calculate and display brightness
         frame = display_brightness(frame, brightness, current_threshold)
