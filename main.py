@@ -1,4 +1,4 @@
-import cv2
+import cv2  # pip install opencv-python
 import numpy as np
 import argparse
 import time
