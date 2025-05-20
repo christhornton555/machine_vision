@@ -1,3 +1,5 @@
+# pip install ultralytics
+# pip install mediapipe
 import cv2  # pip install opencv-python
 import numpy as np
 import argparse
@@ -235,6 +237,7 @@ def main(source, save_output):
 
 if __name__ == "__main__":
     # Parse arguments for choosing the video source
+    # To run: python main.py --video path/to/your_video.mp4 --save-output
     parser = argparse.ArgumentParser(description='YOLOv8 Segmentation and Pose Detection with Video/Camera')
     parser.add_argument('--video', type=str, default=None, help='Path to an MP4 video file. If not provided, webcam will be used.')
     parser.add_argument('--save-output', action='store_true', help='Flag to save the output to a video file.')
